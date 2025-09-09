@@ -3,7 +3,7 @@
 import numpy as np
 import Solve_NFXP_exante as Solve
 import model_zucher_exante as zucher
-
+from scipy import optimize
 
 ev = np.zeros(1) # Global variable
 
@@ -51,9 +51,9 @@ def ll(theta, model, solver,data, pnames, out=1): # out=1 solve optimization, ou
     global ev
     
     # Unpack
-    x = np.numpy(data.x)
-    d = np.numpy(data.d)
-    dx1 = np.numpy(data.dx1)
+    x = np.asarray(data.x)
+    d = np.asarray(data.d)
+    dx1 = np.asarray(data.dx1)
 
     # Update values
     model=updatepar(model,pnames,theta)
@@ -62,12 +62,12 @@ def ll(theta, model, solver,data, pnames, out=1): # out=1 solve optimization, ou
     ev0 = ev
 
     # Solve the model
-    # INSERT EQUATIONS HERE
-    
+    ev, pk, dev = solver.poly(model.bellman, ev0, beta=model.beta, output=3)
     
     # Evaluate likelihood function
-    # INSERT EQUAIONS HERE
-    
+    lik_pr = pk[x]
+    log_lik = np.log(pk[x])*d + np.log(1 - pk[x])*(1-d)
+
     # add on log like for mileage process
     if theta.size>2:
         p = np.append(model.p,1-np.sum(model.p))

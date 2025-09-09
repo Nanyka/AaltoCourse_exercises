@@ -58,12 +58,11 @@ class zurcher():
     def bellman(self,ev0=np.zeros(1),output=1):
 
         # Value of options:
-        #value_keep = 
-        #value_replace = 
+        value_keep = - self.cost + self.beta * ev0
+        value_replace = - self.cost[0] - self.RC + self.beta * ev0[0]
 
-        
         # recenter Bellman by subtracting max(VK, VR)
-        #maxV = 
+        maxV = np.maximum(value_keep,value_replace) # de-max values to avoid exp(large number)
         logsum = (maxV + np.log(np.exp(value_keep-maxV)  +  np.exp(value_replace-maxV)))  # This is the Logsum 
         ev1 = self.P1@logsum
 
