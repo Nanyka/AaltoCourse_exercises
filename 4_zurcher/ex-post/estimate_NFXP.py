@@ -68,7 +68,7 @@ def ll(theta, model, solver,data, pnames, out=1): # out=1 solve optimization
     if theta.size>2:
         p = np.append(model.p,1-np.sum(model.p))
         if any(p<=0):
-            log_lik -= 100000*p[dx1]
+            log_lik -= 100000*p[dx1] # a huge penalty for probability less than zero
         else:
             log_lik += np.log(p[dx1])
         
