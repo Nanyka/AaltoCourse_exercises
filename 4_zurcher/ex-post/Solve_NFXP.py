@@ -76,7 +76,7 @@ class solve_NFXP():
         iteration.converged = 'false'
         for i in range(self.sa_max):
             V = bellman(V0,output=1)
-            iteration.tol[i] = max(abs(V-V0))
+            iteration.tol[i] = max(abs(V-V0)) # ensure all element reach stop criteria
             V0 = V.copy()
 
             # Stopping criteria 1

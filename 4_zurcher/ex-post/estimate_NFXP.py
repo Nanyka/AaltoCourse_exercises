@@ -12,16 +12,22 @@ def estimate(model,solver,data,theta0=[0,0],twostep=0):
     
     samplesize = data.shape[0]
     # STEP 1: Find p 
-    tabulate = data.dx1.value_counts()
+    tabulate = data.dx1.value_counts() # return the descending order of the data
     p = [tabulate[i]/sum(tabulate) for i in range(tabulate.size-1)]
 
-    # STEP 2: Estimate structual parameters
+    # STEP 2: Estimate structural parameters (outer loop)
     model.p = p # Use first step estimates as starting values for p
     
-    # Estimate RC and C
+    # Estimate RC (replacement cost) and C (maintanent cost function)
     pnames = ['RC','c']
     
-    res = optimize.minimize(ll,theta0,args = (model, solver, data, pnames), method = 'trust-ncg',jac = grad, hess = hes, tol=1e-8)
+    res = optimize.minimize(ll # objective: negative mean log-likelihood  →  MLE
+                            ,theta0 # starting guess for parameters θ
+                            ,args = (model, solver, data, pnames)
+                            , method = 'trust-ncg' # Newton-type outer loop
+                            ,jac = grad # analytical gradient (score)
+                            , hess = hes # BHHH/OPG “Hessian”, algorithm to give an approximation of the Hessian of ll
+                            , tol=1e-8)
     model=updatepar(model,pnames,res.x)
     
     # Estimate RC, c and p
@@ -39,7 +45,7 @@ def estimate(model,solver,data,theta0=[0,0],twostep=0):
     h = hes(res.x, model, solver,data, pnames)
     Avar = np.linalg.inv(h*samplesize)
 
-    theta_hat = res.x
+    theta_hat = res.x # the MLE 𝜃^
     
     return model, res, pnames, theta_hat, Avar, converged
 
@@ -70,14 +76,14 @@ def ll(theta, model, solver,data, pnames, out=1): # out=1 solve optimization
         if any(p<=0):
             log_lik -= 100000*p[dx1] # a huge penalty for probability less than zero
         else:
-            log_lik += np.log(p[dx1])
+            log_lik += np.log(p[dx1]) # log π(xₜ | xₜ₋₁, dₜ₋₁; θ)
         
     else:
         p = np.nan
 
 
     if out == 1:
-        # Objective function (negative mean log likleihood)
+        # Objective function (negative mean log likelihood)
         return np.mean(-log_lik)
 
     return model,lik_pr, pk, ev, dev, d,x,dx1
@@ -85,9 +91,9 @@ def ll(theta, model, solver,data, pnames, out=1): # out=1 solve optimization
 def score(theta, model, solver, data, pnames):
     global ev
     model,lik_pr, pk, ev, dev, d,x,dx1 = ll(theta, model, solver, data, pnames,9)
-    F = np.eye(model.n)-dev    
+    F = np.eye(model.n)-dev    # dev is Fréchet derivative matrix
     N = data.x.size
-    dc = 0.001*model.grid
+    dc = 0.001*model.grid # ∂uₖ/∂c = -∂cost(x)/∂c
 
     # Compute the score
     if theta.size>2:
@@ -95,7 +101,7 @@ def score(theta, model, solver, data, pnames):
     else:
         n_p = 0
 
-    # Step 1: compute derivative of contraction operator wrt. parameters
+    # Step 1: compute derivative of contraction operator wrt. parameters (∂Γ/∂θ)
     dbellman_dtheta=np.zeros((model.n,2 + n_p)) 
     dbellman_dtheta[:,0] = (1-pk)*(-1) # derivative wrt RC
     dbellman_dtheta[:,1] = pk*(-dc)   # derivative wrt c
@@ -114,11 +120,17 @@ def score(theta, model, solver, data, pnames):
         invp=np.exp(-np.log(model.p))
         invp = np.vstack((np.diag(invp[0:n_p]),-np.ones((1,n_p))*invp[n_p-1]))
       
-    # Step 2: compute derivative of ev wrt. parameters
+    # Step 2: compute derivative of ev wrt. parameters (∂EV/∂θ)
     dev_dtheta = np.linalg.solve(F,dbellman_dtheta)
 
     # Step 3: compute derivative of log-likelihood wrt. parameters
-    score = ((d - (1- lik_pr))[:,None])   * ( np.vstack((-np.ones(N), dc[x-1], np.zeros((n_p,N)))).T + np.broadcast_to(dev_dtheta[0],(N,2+n_p)) - dev_dtheta[x-1] )
+    # score = resid * ( direct + cont )
+    # or: # (1{d = 1} − pᵣ(x)) · [ ∂uᵣ/∂θ − ∂uₖ/∂θ + β( ∂EV⁽⁰⁾/∂θ − ∂EV(x)/∂θ ) ]
+    score = (((d - (1- lik_pr))[:,None]) # resid
+             * (
+                     np.vstack((-np.ones(N), dc[x-1], np.zeros((n_p,N)))).T # direct
+                 + np.broadcast_to(dev_dtheta[0],(N,2+n_p)) - dev_dtheta[x-1] # cont
+             ))
 
     if theta.size>2:
         for i_p in range(n_p): 

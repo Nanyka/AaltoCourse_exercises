@@ -74,7 +74,7 @@ class zurcher():
             return ev1, pk
 
         # Compute Frechet derivative
-        dev1 =self.dbellman(pk)
+        dev1 =self.dbellman(pk) # TODO: rectify Gauteux Derivative to Frechet Derivative
 
         return ev1, pk, dev1
 
@@ -95,11 +95,11 @@ class zurcher():
         # Discretize odometer data into 1,2,...,n
         x = np.ceil(x*self.n/(self.max*1000))
 
-        # Montly mileage
+        # Monthly mileage
         dx1 = x-np.append(0,x[0:-1])
         dx1 = dx1*(1-dl)+x*dl
 
-        # change type to integrer
+        # change type to integer
         x = x.astype(int)
         dx1 = dx1.astype(int)
 
