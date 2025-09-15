@@ -92,7 +92,7 @@ class zurcher():
 
     return dev1
 
-  def psi(self, pk0, Finv=None):
+  def psi(self, pk0, Finv=None): # Ψ(P)
     self.phi(pk0, Finv)
     pk = self.lambdaa()
     return pk
@@ -129,11 +129,11 @@ class zurcher():
     # Discretize odometer data into 1,2,...,n
     x = np.ceil(x * self.n / (self.max * 1000))
 
-    # Montly mileage
+    # Monthly mileage
     dx1 = x - np.append(0, x[0:-1])
     dx1 = dx1 * (1 - dl) + x * dl
 
-    # change type to integrer
+    # change type to integer
     x = x.astype(int)
     dx1 = dx1.astype(int)
 

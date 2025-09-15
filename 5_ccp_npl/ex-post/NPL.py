@@ -19,12 +19,13 @@ def estimate(model, data, Kmax = 100):
     global pk    
 
     # Find P
-    tabulate = data.dx1.value_counts()
+    tabulate = data.dx1.value_counts() # tabulating counts grouped by the distance of the state change from the current state
     p = [tabulate[i]/sum(tabulate) for i in range(tabulate.size-1)]
     model.p = p 
-    model.state_transition()  
+    model.state_transition()  # calculate P1, P2
     pk0 = np.ones((model.n))*0.99  # starting value for CCP's
 
+    # if it is [0,0,const], the outer loop will stop right in only 1 iteration due to line 44
     theta0 = [0,0]
 
     for K in range(Kmax):
@@ -35,14 +36,14 @@ def estimate(model, data, Kmax = 100):
         # Step 1)  Maximize the pseudo-likelihood function given step K-1 CCPs
         res = optimize.minimize(ll,theta0,args =(model, data, pk0), method='Newton-CG', jac = grad, hess= hes, tol = 1e-6)
         theta_hat = res.x
-        NPL_metric = np.abs(theta0-theta_hat) 
+        NPL_metric = np.abs(theta0-theta_hat)
 
-
-        # Step 2)  Update CCPs using theta_npl from step 1)
+        # Step 2)  Update CCPs using theta_hat from step 1)
         pk0 = pk
         theta0 = theta_hat
         if NPL_metric.all() < 1e-6:
             return res, theta_hat,pk
+
     
     print(f'The function did not converge after {K} iterations')
     
@@ -54,12 +55,12 @@ def ll(theta, model, data, pk0,out=1):
     # update parameters
     model.RC = theta[0]
     model.c = theta[1]
-    model.create_grid()
+    model.create_grid() # calculate transition matrix
 
     # Solve the model
     pk = model.psi(pk0,model.Finv)
 
-    pKdata = pk[data.x]
+    pKdata = pk[data.x] # pkdata = P(a=k|x)
 
     if out == 2:
         return pk, pKdata
@@ -98,7 +99,6 @@ def solve(model):
     pk[0,:] = pk0
     model.create_grid()
 
-
-    for i in range(1,100): 
+    for i in range(1,100):
         pk[i,:]  = model.psi(pk[i-1,:])    
     return pk

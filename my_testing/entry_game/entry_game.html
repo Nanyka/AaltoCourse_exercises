@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Static Entry Game – Playable Demo</title>
+<style>
+  :root{
+    --bg:#0f172a;         /* slate-900 */
+    --panel:#111827;      /* gray-900 */
+    --muted:#94a3b8;      /* slate-400 */
+    --text:#e5e7eb;       /* gray-200 */
+    --accent:#22d3ee;     /* cyan-400 */
+    --good:#22c55e;       /* green-500 */
+    --bad:#ef4444;        /* red-500 */
+    --warn:#f59e0b;       /* amber-500 */
+    --card:#1f2937;       /* gray-800 */
+    --shadow: 0 10px 30px rgba(0,0,0,.35);
+    font-synthesis-weight: none;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background: radial-gradient(1200px 800px at 30% -10%, #1e293b 0, #0b1222 60%, #060b16 100%);
+    color:var(--text); font:16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial;
+  }
+  .wrap{max-width:1100px; margin:40px auto; padding:0 16px;}
+  header{display:flex; justify-content:space-between; align-items:end; margin-bottom:18px}
+  h1{font-size:24px; margin:0}
+  .subtitle{color:var(--muted); font-size:14px}
+
+  .grid{
+    display:grid; gap:16px;
+    grid-template-columns: 1.1fr 1fr;
+  }
+  @media (max-width: 880px){ .grid{grid-template-columns:1fr} }
+
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,.02), transparent 60%), var(--card);
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:18px; padding:16px 16px 18px; box-shadow:var(--shadow);
+  }
+  .card h2{margin:0 0 10px 0; font-size:18px}
+  .row{display:grid; grid-template-columns: 160px 1fr auto; align-items:center; gap:10px; margin:8px 0}
+  .row label{color:var(--muted)}
+  input[type="number"]{
+    width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.1);
+    background:#0b1222; color:var(--text);
+  }
+  input[type="range"]{width:100%}
+  .pill{
+    display:inline-block; padding:6px 10px; border-radius:999px;
+    background:#0b1222; border:1px solid rgba(255,255,255,.08); color:var(--muted); font-size:12px;
+  }
+
+  .buttons{display:flex; gap:10px; flex-wrap:wrap; margin:6px 0 0}
+  button{
+    border:1px solid rgba(255,255,255,.12); background:#0c1428; color:var(--text);
+    padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600; letter-spacing:.2px;
+    transition:transform .05s ease, background .15s ease, border .15s ease;
+  }
+  button:hover{background:#0e1932}
+  button.primary{background:linear-gradient(180deg, rgba(34,211,238,.16), rgba(34,211,238,.08)); border-color:rgba(34,211,238,.5)}
+  button.good{border-color:rgba(34,197,94,.5); background:linear-gradient(180deg, rgba(34,197,94,.14), rgba(34,197,94,.08))}
+  button.warn{border-color:rgba(245,158,11,.5); background:linear-gradient(180deg, rgba(245,158,11,.14), rgba(245,158,11,.08))}
+  button.bad{border-color:rgba(239,68,68,.5); background:linear-gradient(180deg, rgba(239,68,68,.14), rgba(239,68,68,.08))}
+  button:active{transform:translateY(1px)}
+  .kbd{background:#0c1428; border:1px solid rgba(255,255,255,.2); padding:2px 6px; border-radius:8px; font-size:12px; color:var(--muted)}
+
+  .status{
+    background:#0b1222; border:1px dashed rgba(255,255,255,.15); border-radius:14px; padding:10px 12px; margin-top:8px;
+    color:#cbd5e1; font-size:15px;
+  }
+  .hl{color:var(--accent)}
+  .goodtxt{color:var(--good)} .badtxt{color:var(--bad)} .warntxt{color:var(--warn)}
+  .muted{color:var(--muted)}
+
+  .log{background:#0b1222; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px; height:220px; overflow:auto; white-space:pre-wrap; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size:13px}
+
+  footer{margin-top:18px; color:var(--muted); font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Static Entry Game <span class="muted">— playable demo</span></h1>
+      <div class="subtitle">Two firms choose <b>Enter</b> or <b>Stay Out</b> with observed market quality \(x\) and private shocks. No solver—just play rounds and reveal outcomes.</div>
+    </div>
+    <div class="pill">Keys: <span class="kbd">E</span> Enter • <span class="kbd">O</span> Stay Out • <span class="kbd">R</span> Reveal</div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: Parameters & Controls -->
+    <section class="card">
+      <h2>1) Parameters (common knowledge)</h2>
+      <div class="row">
+        <label for="alpha">α (monopoly payoff/quality)</label>
+        <input id="alpha" type="number" step="0.1" value="5">
+        <div class="muted">e.g., 5</div>
+      </div>
+      <div class="row">
+        <label for="beta">β (duopoly payoff/quality)</label>
+        <input id="beta" type="number" step="0.1" value="-11">
+        <div class="muted">e.g., -11</div>
+      </div>
+      <div class="row">
+        <label for="xa">xₐ (A’s market quality)</label>
+        <input id="xa" type="range" min="0" max="1" step="0.01" value="0.52">
+        <div id="xaVal" class="pill">0.52</div>
+      </div>
+      <div class="row">
+        <label for="xb">x_b (B’s market quality)</label>
+        <input id="xb" type="range" min="0" max="1" step="0.01" value="0.22">
+        <div id="xbVal" class="pill">0.22</div>
+      </div>
+      <div class="row">
+        <label for="belief">B’s belief q (Pr[A enters])</label>
+        <input id="belief" type="range" min="0" max="1" step="0.01" value="0.50">
+        <div id="beliefVal" class="pill">0.50</div>
+      </div>
+
+      <div class="buttons" style="margin-top:10px">
+        <button id="randomizeMarket" class="warn">Randomize Market (x’s)</button>
+        <button id="resetLog" class="">Clear Log</button>
+      </div>
+
+      <div class="status" id="paramHint">Try the “contestable” numbers: <span class="hl">α=5</span>, <span class="hl">β=-11</span>, <span class="hl">xₐ=0.52</span>, <span class="hl">x_b=0.22</span>.</div>
+    </section>
+
+    <!-- RIGHT: Actions & Outcome -->
+    <section class="card">
+      <h2>2) Make choices</h2>
+
+      <div class="row" style="grid-template-columns: 1fr">
+        <div>
+          <b>Firm A (You)</b><br>
+          <div class="buttons">
+            <button id="aEnter" class="good">A: Enter</button>
+            <button id="aOut"   class="bad">A: Stay Out</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="grid-template-columns: 1fr">
+        <div>
+          <label><input type="checkbox" id="twoPlayer"> Two-player mode (manual B)</label>
+          <div class="buttons" id="bManual" style="display:none; margin-top:6px">
+            <button id="bEnter" class="good">B: Enter</button>
+            <button id="bOut"   class="bad">B: Stay Out</button>
+          </div>
+          <div class="muted" id="bRule">
+            If unchecked, B uses threshold rule with belief <b>q</b>: enter if Δu<sub>B</sub> = [α + q(β−α)]x_b + (ε<sub>b1</sub>−ε<sub>b0</sub>) ≥ 0.
+          </div>
+        </div>
+      </div>
+
+      <div class="buttons" style="margin-top:10px">
+        <button id="reveal" class="primary">Reveal Round <span class="kbd">R</span></button>
+        <button id="newRound">New Selection</button>
+      </div>
+
+      <div class="status" id="status">Choose A’s action (or both actions if two-player) and click <b>Reveal Round</b>.</div>
+      <div class="row" style="grid-template-columns: 1fr 1fr; margin-top:14px">
+        <div class="card" style="padding:12px">
+          <div><b>Outcome</b></div>
+          <div id="outcome" class="muted">–</div>
+        </div>
+        <div class="card" style="padding:12px">
+          <div><b>Payoffs</b></div>
+          <div id="payoffs" class="muted">A: – , B: –</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:16px">
+    <h2>3) Round Log (last 12)</h2>
+    <div id="log" class="log"></div>
+    <footer>
+      Private shocks are drawn i.i.d. Gumbel(0,1) each round (implemented as −ln(−ln U)). The game shows ex-post payoffs:
+      if a firm enters: \([\,\alpha + d_{\text{other}}(\beta-\alpha)\,]x + \epsilon_{1}\); if it stays out: \(\epsilon_{0}\).
+    </footer>
+  </section>
+</div>
+
+<script>
+(function(){
+  // ----- helpers -----
+  const $ = sel => document.querySelector(sel);
+
+  const alpha = $('#alpha');
+  const beta  = $('#beta');
+  const xa    = $('#xa');
+  const xb    = $('#xb');
+  const belief= $('#belief');
+  const xaVal = $('#xaVal');
+  const xbVal = $('#xbVal');
+  const beliefVal = $('#beliefVal');
+
+  const randomizeMarket = $('#randomizeMarket');
+  const resetLog = $('#resetLog');
+
+  const aEnter = $('#aEnter');
+  const aOut   = $('#aOut');
+  const bEnter = $('#bEnter');
+  const bOut   = $('#bOut');
+  const twoPlayer = $('#twoPlayer');
+  const bManual = $('#bManual');
+  const bRule   = $('#bRule');
+
+  const reveal = $('#reveal');
+  const newRoundBtn = $('#newRound');
+  const status = $('#status');
+  const outcome = $('#outcome');
+  const payoffs = $('#payoffs');
+  const logBox = $('#log');
+
+  let A = {choice: null};
+  let B = {choice: null};
+  let log = [];
+
+  // Gumbel(0,1): -ln(-ln(U)), U~Unif(0,1)
+  function gumbel(){
+    let u = Math.random();
+    // clamp away from 0/1 to avoid infinities
+    u = Math.min(1-1e-12, Math.max(1e-12, u));
+    return -Math.log(-Math.log(u));
+  }
+
+  function payoff(d_self, d_other, x, a, b, eps0, eps1){
+    if(d_self === 1){
+      return ( (a + d_other*(b - a)) * x ) + eps1;
+    }
+    return eps0;
+  }
+
+  function fmt(x){ return (Math.abs(x) < 1e-9 ? 0 : x).toFixed(2); }
+
+  function setStatus(msg){ status.innerHTML = msg; }
+
+  function refreshLabels(){
+    xaVal.textContent = Number(xa.value).toFixed(2);
+    xbVal.textContent = Number(xb.value).toFixed(2);
+    beliefVal.textContent = Number(belief.value).toFixed(2);
+  }
+
+  function randomizeXs(){
+    // light skew toward mid-range using average of two uniforms
+    const u = () => (Math.random() + Math.random())/2;
+    xa.value = u().toFixed(2);
+    xb.value = u().toFixed(2);
+    refreshLabels();
+    setStatus('New market qualities drawn. Make your selection.');
+  }
+
+  function clearRound(keepMsg=false){
+    A.choice = null; B.choice = null;
+    if(!keepMsg){
+      outcome.textContent = '–';
+      payoffs.textContent = 'A: – , B: –';
+      setStatus('Choose A’s action (or both actions if two-player) and click <b>Reveal Round</b>.');
+    }
+  }
+
+  function pushLog(line){
+    log.unshift(line);
+    if(log.length > 12) log.pop();
+    logBox.textContent = log.join('\n');
+  }
+
+  // ----- wire inputs -----
+  [xa, xb, belief].forEach(el => el.addEventListener('input', refreshLabels));
+  randomizeMarket.addEventListener('click', randomizeXs);
+  resetLog.addEventListener('click', () => { log = []; logBox.textContent=''; });
+
+  aEnter.addEventListener('click', () => { A.choice = 1; setStatus('A selects: <b class="goodtxt">Enter</b>. Press <b>Reveal</b> when ready.'); });
+  aOut  .addEventListener('click', () => { A.choice = 0; setStatus('A selects: <b class="badtxt">Stay Out</b>. Press <b>Reveal</b> when ready.'); });
+
+  bEnter.addEventListener('click', () => { B.choice = 1; setStatus('B (manual) selects: <b class="goodtxt">Enter</b>.'); });
+  bOut  .addEventListener('click', () => { B.choice = 0; setStatus('B (manual) selects: <b class="badtxt">Stay Out</b>.'); });
+
+  twoPlayer.addEventListener('change', () => {
+    if(twoPlayer.checked){
+      bManual.style.display = 'block';
+      bRule.style.display = 'none';
+      setStatus('Two-player mode ON: set B’s action manually.');
+    }else{
+      bManual.style.display = 'none';
+      bRule.style.display = 'block';
+      B.choice = null;
+      setStatus('B will use the belief-based threshold rule.');
+    }
+  });
+
+  newRoundBtn.addEventListener('click', () => clearRound());
+
+  // Keyboard shortcuts
+  window.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if(k === 'e'){ aEnter.click(); }
+    else if(k === 'o'){ aOut.click(); }
+    else if(k === 'r'){ reveal.click(); }
+  });
+
+  // ----- reveal logic -----
+  reveal.addEventListener('click', () => {
+    const a = parseFloat(alpha.value);
+    const b = parseFloat(beta.value);
+    const xA = parseFloat(xa.value);
+    const xB = parseFloat(xb.value);
+    const q  = parseFloat(belief.value);
+
+    if(Number.isNaN(a) || Number.isNaN(b)){ setStatus('<span class="warntxt">Please enter numeric α, β.</span>'); return; }
+    if(A.choice === null){ setStatus('<span class="warntxt">Pick A’s action first.</span>'); return; }
+    if(twoPlayer.checked && B.choice === null){ setStatus('<span class="warntxt">Pick B’s action (two-player mode).</span>'); return; }
+
+    // draw private shocks
+    const eps_a0 = gumbel(), eps_a1 = gumbel();
+    const eps_b0 = gumbel(), eps_b1 = gumbel();
+
+    const dA = A.choice;
+
+    // B decision
+    let dB;
+    if(twoPlayer.checked){
+      dB = B.choice;
+    }else{
+      const deltaB = ((a + q*(b - a)) * xB) + (eps_b1 - eps_b0);
+      dB = deltaB >= 0 ? 1 : 0;
+    }
+
+    // ex-post payoffs
+    const uA = payoff(dA, dB, xA, a, b, eps_a0, eps_a1);
+    const uB = payoff(dB, dA, xB, a, b, eps_b0, eps_b1);
+
+    const aAct = dA ? 'Enter' : 'Stay Out';
+    const bAct = dB ? 'Enter' : 'Stay Out';
+
+    outcome.innerHTML = `A <b>${aAct}</b> | B <b>${bAct}</b>`;
+    payoffs.innerHTML = `A: <span class="${uA>=0?'goodtxt':'badtxt'}">${fmt(uA)}</span> , ` +
+                        `B: <span class="${uB>=0?'goodtxt':'badtxt'}">${fmt(uB)}</span>`;
+
+    pushLog(`A:${aAct.padEnd(9)} B:${bAct.padEnd(9)} | (xA=${Number(xA).toFixed(2)}, xB=${Number(xB).toFixed(2)}, α=${a}, β=${b}, q=${Number(q).toFixed(2)}) → A:${fmt(uA)}, B:${fmt(uB)}`);
+
+    // prepare next round (keep status message to show what happened)
+    A.choice = null; B.choice = null;
+    setStatus('Round revealed. Make a new selection for the next round.');
+  });
+
+  // init
+  refreshLabels();
+  clearRound();
+})();
+</script>
+</body>
+</html>

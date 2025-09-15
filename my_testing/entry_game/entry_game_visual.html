@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Static Entry Game — Visual Demo (with Cumulative Profit)</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#0b1222; --card:#101826;
+    --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee;
+    --good:#22c55e; --bad:#ef4444; --warn:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 800px at 30% -10%, #1e293b 0,#0b1222 60%,#060b16 100%);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Helvetica Neue,Arial}
+  .wrap{max-width:1180px;margin:28px auto;padding:0 16px}
+  header{display:flex;justify-content:space-between;align-items:end;margin-bottom:14px}
+  h1{margin:0;font-size:24px}
+  .muted{color:var(--muted)}
+  .grid{display:grid;gap:14px;grid-template-columns:1.05fr 1fr}
+  @media (max-width:980px){.grid{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,rgba(255,255,255,.02),transparent 60%),var(--card);
+        border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:14px;box-shadow:0 14px 30px rgba(0,0,0,.28)}
+  .card h2{margin:0 0 10px 0;font-size:18px}
+  .row{display:grid;grid-template-columns:170px 1fr auto;gap:10px;align-items:center;margin:8px 0}
+  input[type="number"], .pill{
+    padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:#0b1222;color:var(--text)
+  }
+  input[type="number"]{width:100%}
+  input[type="range"]{width:100%}
+  .pill{display:inline-block;color:#cbd5e1;font-size:12px}
+  .buttons{display:flex;gap:10px;flex-wrap:wrap}
+  button{border:1px solid rgba(255,255,255,.14);background:#0c1428;color:var(--text);
+         padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:700;letter-spacing:.2px;
+         transition:transform .06s ease, background .15s ease, border .15s ease}
+  button:hover{background:#0e1932}
+  .primary{background:linear-gradient(180deg,rgba(34,211,238,.16),rgba(34,211,238,.08));border-color:rgba(34,211,238,.5)}
+  .goodBtn{background:linear-gradient(180deg,rgba(34,197,94,.14),rgba(34,197,94,.08));border-color:rgba(34,197,94,.5)}
+  .badBtn{background:linear-gradient(180deg,rgba(239,68,68,.14),rgba(239,68,68,.08));border-color:rgba(239,68,68,.5)}
+  .warnBtn{background:linear-gradient(180deg,rgba(245,158,11,.14),rgba(245,158,11,.08));border-color:rgba(245,158,11,.5)}
+  .kbd{background:#0c1428;border:1px solid rgba(255,255,255,.22);padding:2px 6px;border-radius:8px;font-size:12px;color:var(--muted)}
+  .status{background:#0b1222;border:1px dashed rgba(255,255,255,.15);border-radius:12px;padding:10px 12px;margin-top:8px}
+  .barWrap{position:relative;height:40px;background:#0b1222;border:1px solid rgba(255,255,255,.08);border-radius:12px;overflow:hidden}
+  .midLine{position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.18)}
+  .barPos,.barNeg{position:absolute;top:0;height:100%;transition:width .45s ease}
+  .barPos{left:50%;background:linear-gradient(90deg,rgba(34,197,94,.5),rgba(34,197,94,.9))}
+  .barNeg{right:50%;background:linear-gradient(90deg,rgba(239,68,68,.9),rgba(239,68,68,.5))}
+  .barLabel{position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:13px;color:#cbd5e1}
+  .barValue{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-weight:800}
+  .good{color:var(--good)} .bad{color:var(--bad)}
+  .spark{width:100%;height:90px;display:block;background:#0b1222;border:1px solid rgba(255,255,255,.08);border-radius:12px}
+  .matrix{display:grid;grid-template-columns:120px 1fr 1fr;border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden}
+  .cell{border-left:1px solid rgba(255,255,255,.08);border-top:1px solid rgba(255,255,255,.08);padding:10px;min-height:60px}
+  .cell.head{background:#0c1428;font-weight:700}
+  .cell.hl{box-shadow:inset 0 0 0 2px rgba(34,211,238,.8);background:rgba(34,211,238,.08)}
+  .tiny{font-size:12px;color:#cbd5e1}
+  .shake{animation:shake .25s linear 2}
+  @keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-2px)}50%{transform:translateX(2px)}75%{transform:translateX(-2px)}100%{transform:translateX(0)}}
+  canvas#confetti{position:fixed;inset:0;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Static Entry Game <span class="muted">— visual & playable</span></h1>
+      <div class="muted">Two firms choose <b>Enter</b> or <b>Stay Out</b> with public market quality \(x\) and private shocks. No solver; visuals help reason about choices.</div>
+    </div>
+    <div class="muted">Keys: <span class="kbd">E</span> Enter • <span class="kbd">O</span> Out • <span class="kbd">R</span> Reveal</div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: parameters + decisions -->
+    <section class="card">
+      <h2>1) Parameters & Decisions</h2>
+      <div class="row"><label>α (monopoly payoff/quality)</label><input id="alpha" type="number" step="0.1" value="5"><div class="pill">try 5</div></div>
+      <div class="row"><label>β (duopoly payoff/quality)</label><input id="beta" type="number" step="0.1" value="-11"><div class="pill">try −11</div></div>
+      <div class="row"><label>xₐ (A’s quality)</label><input id="xa" type="range" min="0" max="1" step="0.01" value="0.52"><div id="xaVal" class="pill">0.52</div></div>
+      <div class="row"><label>x_b (B’s quality)</label><input id="xb" type="range" min="0" max="1" step="0.01" value="0.22"><div id="xbVal" class="pill">0.22</div></div>
+
+      <div style="margin-top:10px">
+        <b>Firm A (You):</b>
+        <div class="buttons" style="margin-top:6px">
+          <button id="aEnter" class="goodBtn">A: Enter</button>
+          <button id="aOut" class="badBtn">A: Stay Out</button>
+          <button id="newSel">New Selection</button>
+        </div>
+      </div>
+
+      <div style="margin-top:10px">
+        <label><input type="checkbox" id="twoP"> Two-player mode (manual B)</label>
+        <div id="bManual" class="buttons" style="display:none;margin-top:6px">
+          <button id="bEnter" class="goodBtn">B: Enter</button>
+          <button id="bOut" class="badBtn">B: Stay Out</button>
+        </div>
+        <div id="bAuto" class="row" style="grid-template-columns:170px 1fr auto;margin-top:6px">
+          <label>AI belief q = Pr[A enters]</label>
+          <input id="belief" type="range" min="0" max="1" step="0.01" value="0.50">
+          <div id="beliefVal" class="pill">0.50</div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px">
+        <div class="row" style="grid-template-columns:170px 1fr auto">
+          <label>My belief r = Pr[B enters]</label>
+          <input id="aBelief" type="range" min="0" max="1" step="0.01" value="0.5">
+          <div id="aBeliefVal" class="pill">0.50</div>
+        </div>
+        <div class="status" id="advice">Expected advantage if A enters (ignoring shocks): <b id="adv">0.00</b></div>
+      </div>
+
+      <div class="buttons" style="margin-top:10px">
+        <button id="reveal" class="primary">Reveal Round</button>
+        <button id="randX" class="warnBtn">Randomize x’s</button>
+        <button id="clearLog">Clear Log</button>
+      </div>
+      <div class="status" id="status">Pick A’s action (and B’s if two-player), then press <b>Reveal Round</b>.</div>
+    </section>
+
+    <!-- RIGHT: visuals -->
+    <section class="card">
+      <h2>2) Visuals</h2>
+
+      <!-- Outcome matrix -->
+      <div class="tiny" style="margin-bottom:6px">Outcome matrix (deterministic part only; each cell lists <b>A | B</b>)</div>
+      <div id="matrix" class="matrix" style="margin-bottom:10px">
+        <div class="cell head"></div>
+        <div class="cell head">B: Enter</div>
+        <div class="cell head">B: Out</div>
+
+        <div class="cell head">A: Enter</div>
+        <div id="mEE" class="cell"><span class="tiny">A|B</span></div>
+        <div id="mEO" class="cell"><span class="tiny">A|B</span></div>
+
+        <div class="cell head">A: Out</div>
+        <div id="mOE" class="cell"><span class="tiny">A|B</span></div>
+        <div id="mOO" class="cell"><span class="tiny">A|B</span></div>
+      </div>
+
+      <!-- Payoff bars -->
+      <div class="row" style="grid-template-columns:100px 1fr 100px">
+        <div class="pill">A payoff</div>
+        <div class="barWrap" id="barA">
+          <div class="midLine"></div>
+          <div class="barNeg"></div><div class="barPos"></div>
+          <div class="barLabel">Profit (− to +)</div>
+          <div class="barValue" id="barAVal">–</div>
+        </div>
+        <div class="pill tiny muted">green=profit, red=loss</div>
+      </div>
+      <div class="row" style="grid-template-columns:100px 1fr 100px">
+        <div class="pill">B payoff</div>
+        <div class="barWrap" id="barB">
+          <div class="midLine"></div>
+          <div class="barNeg"></div><div class="barPos"></div>
+          <div class="barLabel">Profit (− to +)</div>
+          <div class="barValue" id="barBVal">–</div>
+        </div>
+        <div class="pill tiny muted"></div>
+      </div>
+
+      <!-- History sparkline -->
+      <div class="row" style="grid-template-columns:120px 1fr auto;margin-top:12px">
+        <div class="pill">History (last 20)</div>
+        <canvas id="spark" class="spark" width="640" height="90"></canvas>
+        <div class="pill tiny">A: cyan • B: amber</div>
+      </div>
+
+      <!-- NEW: Cumulative profit chart -->
+      <div class="row" style="grid-template-columns:120px 1fr auto;margin-top:12px">
+        <div class="pill">Cumulative profit</div>
+        <canvas id="cum" class="spark" width="640" height="110"></canvas>
+        <div class="pill tiny">A: cyan • B: amber</div>
+      </div>
+
+      <div class="status" id="summary">Outcome: –</div>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:14px">
+    <h2>3) Log</h2>
+    <div id="log" style="white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;background:#0b1222;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px;max-height:220px;overflow:auto"></div>
+    <div class="tiny muted" style="margin-top:6px">
+      Payoff if enter: \([\,\alpha + d_{\text{other}}(\beta-\alpha)\,]x + \epsilon_1\); if out: \(\epsilon_0\). Shocks are i.i.d. Gumbel(0,1) per round. Matrix shows deterministic payoffs.
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  // ---------- helpers ----------
+  const $ = s => document.querySelector(s);
+  const alpha = $('#alpha'), beta = $('#beta'), xa = $('#xa'), xb = $('#xb');
+  const xaVal = $('#xaVal'), xbVal = $('#xbVal');
+  const belief = $('#belief'), beliefVal = $('#beliefVal');
+  const aBelief = $('#aBelief'), aBeliefVal = $('#aBeliefVal');
+  const twoP = $('#twoP'), bManual = $('#bManual'), bAuto = $('#bAuto');
+  const aEnter = $('#aEnter'), aOut = $('#aOut'), bEnter = $('#bEnter'), bOut = $('#bOut');
+  const reveal = $('#reveal'), status = $('#status'), newSel = $('#newSel');
+  const randX = $('#randX'), clearLog = $('#clearLog'), logBox = $('#log');
+  const matrixCells = {EE:$('#mEE'), EO:$('#mEO'), OE:$('#mOE'), OO:$('#mOO')};
+  const barA = $('#barA'), barB = $('#barB'), barAVal = $('#barAVal'), barBVal = $('#barBVal');
+  const spark = $('#spark'), ctx = spark.getContext('2d');
+  const cum = $('#cum'), cctx2 = cum.getContext('2d');                    /* NEW */
+  const summary = $('#summary'), advice = $('#advice'), adv = $('#adv');
+  const confettiCanvas = $('#confetti'), cctx = confettiCanvas.getContext('2d');
+
+  let A = {choice:null}, B = {choice:null};
+  const histA = [], histB = []; const MAXH = 20;
+  let log = [];
+
+  /* NEW: cumulative series and totals */
+  const cumA = [], cumB = [];
+  let totA = 0, totB = 0;
+
+  function gumbel(){ let u=Math.min(1-1e-12,Math.max(1e-12,Math.random())); return -Math.log(-Math.log(u)); }
+  function payoff(d_self, d_other, x, a, b, e0, e1){ return d_self? ((a + d_other*(b-a))*x + e1) : e0; }
+  function fmt(x){ return (Math.abs(x)<1e-9?0:x).toFixed(2); }
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+  function setStatus(s){ status.innerHTML=s; }
+
+  // ---------- UI reactions ----------
+  function refreshLabels(){
+    xaVal.textContent = Number(xa.value).toFixed(2);
+    xbVal.textContent = Number(xb.value).toFixed(2);
+    beliefVal.textContent = Number(belief.value).toFixed(2);
+    aBeliefVal.textContent = Number(aBelief.value).toFixed(2);
+    updateMatrix();
+    updateAdvice();
+  }
+  [xa,xb,belief,aBelief,alpha,beta].forEach(el => el.addEventListener('input', refreshLabels));
+
+  twoP.addEventListener('change', ()=>{
+    if(twoP.checked){ bManual.style.display='flex'; bAuto.style.display='none'; B.choice = null; }
+    else{ bManual.style.display='none'; bAuto.style.display='grid'; B.choice = null; }
+    setStatus('Mode changed. Make selections and reveal.');
+  });
+
+  aEnter.addEventListener('click',()=>{ A.choice=1; setStatus('A selects: <b class="good">Enter</b>.'); });
+  aOut  .addEventListener('click',()=>{ A.choice=0; setStatus('A selects: <b class="bad">Stay Out</b>.'); });
+  bEnter.addEventListener('click',()=>{ B.choice=1; setStatus('B selects: <b class="good">Enter</b>.'); });
+  bOut  .addEventListener('click',()=>{ B.choice=0; setStatus('B selects: <b class="bad">Stay Out</b>.'); });
+  newSel.addEventListener('click',()=>{ A.choice=null; B.choice=null; setStatus('New selection cleared.'); });
+
+  randX.addEventListener('click',()=>{
+    const u=()=>((Math.random()+Math.random())/2);
+    xa.value=u().toFixed(2); xb.value=u().toFixed(2); refreshLabels();
+    setStatus('Randomized x’s. Pick actions.');
+  });
+
+  clearLog.addEventListener('click',()=>{
+    log=[]; logBox.textContent='';
+    histA.length=0; histB.length=0; drawSpark();
+    /* reset cumulative as well */
+    cumA.length=0; cumB.length=0; totA=0; totB=0; drawCumulative();
+  });
+
+  // keyboard
+  window.addEventListener('keydown',e=>{
+    const k=e.key.toLowerCase();
+    if(k==='e') aEnter.click();
+    else if(k==='o') aOut.click();
+    else if(k==='r') reveal.click();
+  });
+
+  // ---------- Matrix & Advice (pre-reveal visuals) ----------
+  function writeCell(el, aVal, bVal){
+    el.innerHTML = `<span class="tiny">A|B</span><br><b>${fmt(aVal)}</b> | <b>${fmt(bVal)}</b>`;
+  }
+  function updateMatrix(){
+    const a = parseFloat(alpha.value), b = parseFloat(beta.value);
+    const xA = parseFloat(xa.value), xB = parseFloat(xb.value);
+
+    const A_enter_B_enter_A = (a + 1*(b-a))*xA;
+    const A_enter_B_out_A   = (a + 0*(b-a))*xA;
+    const B_enter_A_enter_B = (a + 1*(b-a))*xB;
+    const B_enter_A_out_B   = (a + 0*(b-a))*xB;
+
+    writeCell(matrixCells.EE, A_enter_B_enter_A, B_enter_A_enter_B);
+    writeCell(matrixCells.EO, A_enter_B_out_A,  0);
+    writeCell(matrixCells.OE, 0,                 B_enter_A_out_B);
+    writeCell(matrixCells.OO, 0,                 0);
+
+    Object.values(matrixCells).forEach(c=>c.classList.remove('hl'));
+  }
+
+  function updateAdvice(){
+    const a = parseFloat(alpha.value), b = parseFloat(beta.value);
+    const xA = parseFloat(xa.value);
+    const r  = parseFloat(aBelief.value); // A’s belief Pr[B enters]
+    const advVal = (a + r*(b-a))*xA; // deterministic advantage ignoring shocks
+    adv.textContent = fmt(advVal);
+    // shake hint if near indifferent
+    const near = Math.abs(advVal) < 0.15;
+    advice.classList.toggle('shake', near);
+  }
+
+  // ---------- Bars & sparkline ----------
+  function setBar(barEl, value, scaleHint=8){
+    const pos = barEl.querySelector('.barPos');
+    const neg = barEl.querySelector('.barNeg');
+    const valLabel = barEl.querySelector('.barValue');
+    const all = [...histA, ...histB, value];
+    const maxAbs = Math.max(1, ...all.map(v=>Math.abs(v)), scaleHint);
+    const width = v => clamp(Math.abs(v)/maxAbs*50, 0, 50); // percent of half-bar
+
+    pos.style.width = (value>0? width(value):0) + '%';
+    neg.style.width = (value<0? width(value):0) + '%';
+    valLabel.innerHTML = `<span class="${value>=0?'good':'bad'}">${fmt(value)}</span>`;
+  }
+
+  function drawSpark(){
+    ctx.clearRect(0,0,spark.width,spark.height);
+    const pad=6, W=spark.width, H=spark.height, N=Math.max(histA.length,histB.length,2);
+    const all=[...histA,...histB,0];
+    const ymax=Math.max(1, ...all.map(v=>Math.abs(v)));
+    const scale = v => (H/2) - (v / (ymax||1))*(H/2 - pad);
+
+    // midline
+    ctx.strokeStyle='rgba(255,255,255,.18)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(W,H/2); ctx.stroke();
+
+    function line(arr, stroke){
+      ctx.beginPath();
+      const step=(W-2*pad)/Math.max(1,(N-1));
+      arr.forEach((v,i)=>{
+        const x=pad+i*step, y=scale(v);
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      });
+      ctx.strokeStyle=stroke; ctx.lineWidth=2; ctx.stroke();
+    }
+    line(histA,'#22d3ee'); // cyan
+    line(histB,'#f59e0b'); // amber
+  }
+
+  /* ---------- NEW: Cumulative chart ---------- */
+  function drawCumulative(){
+    const W=cum.width, H=cum.height, pad=8;
+    cctx2.clearRect(0,0,W,H);
+
+    const N=Math.max(cumA.length,cumB.length,2);
+
+    // Include zero in range so baseline is always visible
+    const all=[0, ...cumA, ...cumB];
+    const minV=Math.min(...all), maxV=Math.max(...all);
+    const range = Math.max(1e-6, maxV - minV);
+
+    // y position of zero baseline
+    const y0 = H - ((0 - minV)/range)*(H - 2*pad) - pad;
+    cctx2.strokeStyle='rgba(255,255,255,.18)'; cctx2.lineWidth=1;
+    cctx2.beginPath(); cctx2.moveTo(0,y0); cctx2.lineTo(W,y0); cctx2.stroke();
+
+    const step=(W-2*pad)/Math.max(1,(N-1));
+    function plot(arr, stroke){
+      if(arr.length===0){ return; }
+      cctx2.beginPath();
+      arr.forEach((v,i)=>{
+        const x=pad+i*step;
+        const y=H - ((v - minV)/range)*(H - 2*pad) - pad;
+        if(i===0) cctx2.moveTo(x,y); else cctx2.lineTo(x,y);
+      });
+      cctx2.strokeStyle=stroke; cctx2.lineWidth=2; cctx2.stroke();
+    }
+    plot(cumA,'#22d3ee'); // A cumulative
+    plot(cumB,'#f59e0b'); // B cumulative
+  }
+
+  // ---------- Confetti ----------
+  let confetti = [];
+  function launchConfetti(strength=1){
+    const w=confettiCanvas.width=window.innerWidth;
+    const h=confettiCanvas.height=window.innerHeight;
+    const n = Math.floor(60*strength);
+    for(let i=0;i<n;i++){
+      confetti.push({
+        x: Math.random()*w, y: -10 - Math.random()*30,
+        vx: (Math.random()-0.5)*2, vy: 2+Math.random()*3,
+        size: 2+Math.random()*4,
+        color: `hsl(${Math.floor(Math.random()*360)},85%,60%)`,
+        life: 120+Math.random()*40
+      });
+    }
+  }
+  function animConfetti(){
+    cctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+    confetti.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.vy+=0.02; p.life--;
+      cctx.fillStyle=p.color; cctx.fillRect(p.x,p.y,p.size,p.size);
+    });
+    confetti = confetti.filter(p=>p.life>0 && p.y<confettiCanvas.height+10);
+    requestAnimationFrame(animConfetti);
+  }
+  animConfetti();
+
+  // ---------- Reveal ----------
+  reveal.addEventListener('click', ()=>{
+    const a=parseFloat(alpha.value), b=parseFloat(beta.value);
+    const xA=parseFloat(xa.value), xB=parseFloat(xb.value);
+    const q=parseFloat(belief.value);
+
+    if(Number.isNaN(a)||Number.isNaN(b)){ setStatus('<span class="bad">Enter numeric α,β.</span>'); return; }
+    if(A.choice===null){ setStatus('<span class="warn">Pick A’s action.</span>'); return; }
+    if(twoP.checked && B.choice===null){ setStatus('<span class="warn">Pick B’s action.</span>'); return; }
+
+    // private shocks
+    const ea0=gumbel(), ea1=gumbel(), eb0=gumbel(), eb1=gumbel();
+
+    // B decision
+    let dB;
+    if(twoP.checked){ dB=B.choice; }
+    else{
+      const deltaB = ((a + q*(b-a))*xB) + (eb1-eb0);
+      dB = (deltaB>=0)?1:0;
+    }
+    const dA = A.choice;
+
+    const uA = payoff(dA,dB,xA,a,b,ea0,ea1);
+    const uB = payoff(dB,dA,xB,a,b,eb0,eb1);
+
+    // bars, history
+    setBar(barA,uA); setBar(barB,uB);
+    histA.unshift(uA); histB.unshift(uB);
+    if(histA.length>MAXH) histA.pop();
+    if(histB.length>MAXH) histB.pop();
+    drawSpark();
+
+    // NEW: update cumulative series and redraw
+    totA += uA; totB += uB;
+    cumA.push(totA); cumB.push(totB);
+    drawCumulative();
+
+    // matrix highlight and summary
+    Object.values(matrixCells).forEach(c=>c.classList.remove('hl'));
+    const key = (dA? 'E':'O')+(dB? 'E':'O'); matrixCells[key].classList.add('hl');
+    summary.textContent = `Outcome: A ${dA? 'Enter':'Out'} | B ${dB? 'Enter':'Out'}  →  A ${fmt(uA)}, B ${fmt(uB)}`;
+
+    // confetti / shake
+    if(uA>0 || uB>0){ launchConfetti( (Math.max(uA,uB))>5 ? 1.2 : 0.6 ); }
+    if(uA<0) barA.classList.add('shake'); setTimeout(()=>barA.classList.remove('shake'),260);
+    if(uB<0) barB.classList.add('shake'); setTimeout(()=>barB.classList.remove('shake'),260);
+
+    // log
+    const line = `A:${dA? 'Enter':'Out'}  B:${dB? 'Enter':'Out'} | (xA=${fmt(xA)}, xB=${fmt(xB)}, α=${a}, β=${b}, q=${fmt(q)}) → A:${fmt(uA)}, B:${fmt(uB)}`;
+    log.unshift(line); if(log.length>14) log.pop(); logBox.textContent=log.join('\n');
+
+    // next round prep
+    A.choice=null; B.choice=null;
+    setStatus('Round revealed. Make a new selection for the next round.');
+  });
+
+  // ---------- init ----------
+  refreshLabels();
+  updateMatrix();
+  setStatus('Pick actions, then Reveal.');
+  drawSpark();
+  drawCumulative();   /* NEW */
+})();
+</script>
+</body>
+</html>
