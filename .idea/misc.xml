@@ -3,5 +3,8 @@
   <component name="Black">
     <option name="sdkName" value="AgentBasedModel" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="AgentBasedModel" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="/opt/anaconda3/envs/data_science" project-jdk-type="Python SDK" />
+  <component name="PyCharmDSProjectLayout">
+    <option name="id" value="JupyterRightHiddenStructureLayout" />
+  </component>
 </project>
