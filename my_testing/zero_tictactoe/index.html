@@ -1,0 +1,369 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zero Tic‑Tac‑Toe — NRLS Showcase</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    input[type="range"] { accent-color: #10b981; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  </style>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-stone-50 to-white text-stone-900 selection:bg-emerald-100 selection:text-emerald-900">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
+    <!-- Header -->
+    <header class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-md"></div>
+        <div>
+          <div class="font-extrabold text-xl tracking-tight">Zero Tic‑Tac‑Toe</div>
+          <div class="text-xs text-stone-500">Play the NRLS‑tuned bot • explore the model</div>
+        </div>
+      </div>
+      <nav class="flex items-center gap-2 text-sm">
+        <a id="navPlay" class="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 cursor-pointer">Play</a>
+        <a id="navModel" class="px-3 py-1 rounded-xl hover:bg-stone-100 cursor-pointer">Model</a>
+      </nav>
+    </header>
+
+    <!-- Main grid: left (game), right (tabbed info) -->
+    <main class="grid lg:grid-cols-2 gap-8 items-start">
+      <!-- Left: Game card -->
+      <section class="rounded-3xl border bg-white p-5 sm:p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <div class="font-semibold text-lg">Game</div>
+          <div id="status" class="text-sm text-stone-500">Your turn</div>
+        </div>
+
+        <!-- Board -->
+        <div id="board" class="grid grid-cols-3 gap-3 place-items-center"></div>
+
+        <!-- Inventories (two-row layout) -->
+        <div class="mt-5 grid sm:grid-cols-2 gap-3">
+          <div class="rounded-2xl bg-stone-50 px-3 py-3 flex items-center gap-3">
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-emerald-500 text-white text-xs font-bold">X</span>
+              <span class="text-sm text-stone-600">Your inventory</span>
+            </div>
+            <div class="grid grid-cols-3 gap-x-3 gap-y-1 w-full max-w-[220px] ml-auto">
+              <div class="flex flex-col items-center">
+                <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs">1×</span>
+                <span id="invHuman1" class="text-sm tabular-nums mt-1">2</span>
+              </div>
+              <div class="flex flex-col items-center">
+                <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs">2×</span>
+                <span id="invHuman2" class="text-sm tabular-nums mt-1">2</span>
+              </div>
+              <div class="flex flex-col items-center">
+                <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs">3×</span>
+                <span id="invHuman3" class="text-sm tabular-nums mt-1">2</span>
+              </div>
+            </div>
+          </div>
+          <div class="rounded-2xl bg-stone-50 px-3 py-3 flex items-center gap-3">
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-indigo-500 text-white text-xs font-bold">O</span>
+              <span class="text-sm text-stone-600">Bot inventory</span>
+            </div>
+            <div class="grid grid-cols-3 gap-x-3 gap-y-1 w-full max-w-[220px] ml-auto">
+              <div class="flex flex-col items-center">
+                <span class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs">1×</span>
+                <span id="invBot1" class="text-sm tabular-nums mt-1">2</span>
+              </div>
+              <div class="flex flex-col items-center">
+                <span class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs">2×</span>
+                <span id="invBot2" class="text-sm tabular-nums mt-1">2</span>
+              </div>
+              <div class="flex flex-col items-center">
+                <span class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs">3×</span>
+                <span id="invBot3" class="text-sm tabular-nums mt-1">2</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="mt-6 space-y-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="text-sm text-stone-500">You play as</div>
+            <select id="humanSide" class="border rounded-xl px-2 py-1 text-sm">
+              <option value="X">X (first)</option>
+              <option value="O">O (second)</option>
+            </select>
+            <div class="ml-4 text-sm text-stone-500">Bot depth</div>
+            <input id="depth" type="range" min="2" max="6" step="1" value="4" class="w-40"/>
+            <div id="depthLabel" class="text-sm tabular-nums w-6 text-center">4</div>
+            <button id="newGame" class="ml-auto px-3 py-2 rounded-2xl bg-stone-900 text-white hover:bg-stone-700 shadow-sm">New Game</button>
+          </div>
+
+          <div class="rounded-2xl border bg-stone-50 p-3">
+            <div class="flex items-center justify-between">
+              <div class="text-sm text-stone-600">Select a piece value</div>
+              <div class="text-xs text-stone-400">(legal target cells highlight)</div>
+            </div>
+            <div id="pieceBar" class="mt-3 grid grid-cols-3 gap-3"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: Tabbed info pane -->
+      <aside class="space-y-6 self-start pt-1">
+        <!-- Tabs (right pane only) -->
+        <!-- Pane: Play info (θ editor + About) -->
+        <div id="right-pane-play" class="space-y-6">
+          <div class="rounded-3xl border bg-white p-6 shadow-sm">
+            <div class="font-semibold text-lg mb-2">NRLS model</div>
+            <p class="text-sm text-stone-600 leading-relaxed">
+              The server runs a depth‑limited alpha–beta search. Leaf positions are scored by
+              <span class="font-mono">E<sub>θ</sub>(s) = θ · x(s)</span>. Paste your trained θ to play with your research model.
+            </p>
+            <textarea id="thetaJson" class="w-full h-28 rounded-xl border p-3 text-xs font-mono bg-stone-50 mt-3"></textarea>
+            <div class="flex gap-2 mt-2">
+              <button id="applyTheta" class="px-3 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700">Apply θ</button>
+              <button id="resetTheta" class="px-3 py-2 rounded-xl bg-stone-100 hover:bg-stone-200">Reset θ</button>
+            </div>
+          </div>
+
+          <div class="rounded-3xl border bg-white p-6 shadow-sm">
+            <div class="font-semibold mb-2">About Zero Tic‑Tac‑Toe</div>
+            <ul class="list-disc ml-5 text-sm text-stone-700 space-y-1">
+              <li>Each side has two <b>1s</b>, two <b>2s</b>, two <b>3s</b>.</li>
+              <li>Overwrite only your opponent with a strictly higher value. Never overwrite yourself.</li>
+              <li>Win is a 3‑in‑a‑row by owner (values can differ).</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Pane: Formalization & NRLS explanation -->
+        
+<div id="right-pane-model" class="space-y-6 hidden">
+  <!-- 1) Structural model -->
+  <div class="rounded-3xl border bg-white p-6 shadow-sm">
+    <h2 class="text-lg font-semibold mb-2">1) Structural model (dynamic game)</h2>
+    <div class="text-sm text-stone-700 space-y-2">
+      <p><b>State</b> \(s\): board configuration + inventories + player to move (finite horizon \(t=0,\dots,12\)).</p>
+      <p><b>Actions</b> \(a\in A(s)\): pick a value \(v\in\{1,2,3\}\) you still have and a cell \(i\) that is empty, or contains an opponent tile with smaller value (self‑overwrite is forbidden).</p>
+      <p><b>Transition</b> \(s' = T(s,a)\): deterministic placement (with overwrite if allowed) and player switch.</p>
+      <p><b>Per‑period utility</b> \(u_{\theta}(s,a)\): parameterized. At terminal states give \(+1/-1/0\) (win/loss/draw). You can add tastes for patterns, e.g. \(\\theta_c\)[center], \(\\theta_{crn}\)[corner], \(\\theta_b\)[blocking], \(\\theta_f\)[forking], …</p>
+      <p>Add i.i.d. Type‑I extreme value shocks \(\\varepsilon_a\) to get a **logit/quantal‑response** choice model.</p>
+      <p><b>Objective</b>: Markov strategy maximizing (optionally discounted) expected payoff with discount \(\\beta\).</p>
+    </div>
+    <div class="mt-3 rounded-xl bg-stone-50 p-3 text-sm">
+      <div class="mb-2"><b>Logit Bellman equation</b></div>
+      <div class="font-mono overflow-auto">\[ V_t(s) = \\gamma + \\log \\sum\_{a\\in A(s)} \\exp\\big( u_{\\theta}(s,a) + \\beta\\, V\_{t+1}(T(s,a)) \\big) \]</div>
+      <div class="mt-3 mb-2"><b>Conditional choice probabilities (CCPs)</b></div>
+      <div class="font-mono overflow-auto">\[ P\_{\\theta}(a\\mid s) = \\frac{ \\exp\\big( u_{\\theta}(s,a) + \\beta\\, V\_{t+1}(T(s,a)) \\big) }{ \\sum\_{a'} \\exp\\big( u_{\\theta}(s,a') + \\beta\\, V\_{t+1}(T(s,a')) \\big) } \]</div>
+    </div>
+  </div>
+
+  <!-- 2) What you estimate -->
+  <div class="rounded-3xl border bg-white p-6 shadow-sm">
+    <h2 class="text-lg font-semibold mb-2">2) What you estimate</h2>
+    <p class="text-sm text-stone-700 mb-2">
+      Given a dataset of human games \\(\\{(s_i, a_i)\\}\\), the **log‑likelihood** is
+    </p>
+    <div class="font-mono text-sm bg-stone-50 p-3 rounded-xl overflow-auto">\[ \\ell(\\theta) = \\sum\_i \\log P\_{\\theta}(a\_i \\mid s\_i) \]</div>
+    <ul class="list-disc ml-5 text-sm text-stone-700 space-y-1 mt-3">
+      <li>If utilities only appear at terminal nodes (win=1, loss=-1, draw=0) and there are no tastes, you mainly estimate an **error/temperature** parameter and optionally \(\\beta\).</li>
+      <li>With features (center/corner/block/fork, etc.), you **recover human heuristics** \(\\theta\\) plus noise.</li>
+    </ul>
+  </div>
+
+  <!-- 3) Solution / estimation routes -->
+  <div class="rounded-3xl border bg-white p-6 shadow-sm">
+    <h2 class="text-lg font-semibold mb-2">3) Solution / estimation routes</h2>
+    <ul class="list-disc ml-5 text-sm text-stone-700 space-y-1">
+      <li><b>Direct MLE (solve DP inside)</b>: For each \\(\\theta\\), do backward induction to get \\(V\\) and CCPs, compute \\(\\ell(\\theta)\\), optimize (e.g., BFGS).</li>
+      <li><b>CCP (Hotz–Miller)</b>: Estimate empirical \\(\\widehat{P}(a\\mid s)\\), invert to choice‑specific value indices, then map to \\(\\theta\\) via regression/moments.</li>
+      <li><b>NPL (Aguirregabiria–Mira)</b>: Iterate between policy/value given \\(\\theta\\) and updating \\(\\theta\\) to fit observed CCPs.</li>
+      <li><b>MPEC</b>: Maximize \\(\\ell(\\theta,P,V)\\) **subject to** Bellman/CCP constraints (good for small state spaces).</li>
+    </ul>
+  </div>
+
+  <!-- 4) Identification & interpretation -->
+  <div class="rounded-3xl border bg-white p-6 shadow-sm">
+    <h2 class="text-lg font-semibold mb-2">4) Identification & interpretation</h2>
+    <ul class="list-disc ml-5 text-sm text-stone-700 space-y-1">
+      <li>With perfect information and known terminal payoffs, the minimax policy is known; structural estimation measures **deviations from optimality** and infers heuristics \\(\\theta\\).</li>
+      <li>Finite horizon & deterministic transitions avoid multiplicity; **latent classes** can capture novice vs expert.</li>
+      <li>**Quantal response equilibrium (QRE)** in this finite game is a special case of the logit model.</li>
+    </ul>
+  </div>
+
+  <!-- 5) Why do this? -->
+  <div class="rounded-3xl border bg-white p-6 shadow-sm">
+    <h2 class="text-lg font-semibold mb-2">5) Why do this?</h2>
+    <ul class="list-disc ml-5 text-sm text-stone-700 space-y-1">
+      <li><i>Benchmark</i>: verify CCP/NPL/MPEC implementations on a fully enumeratable game.</li>
+      <li><i>Inverse RL, in miniature</i>: recover human valuation of patterns (center vs corner, blocking urgency).</li>
+      <li><i>Teaching</i>: ideal sandbox for dynamic discrete choice with terminal utilities.</li>
+    </ul>
+  </div>
+</div>
+
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    // ------- API base -------
+    const API = (path)=>`http://localhost:8000${path}`;
+
+    // ------- Game constants -------
+    const OWNER=[0,1,1,1,2,2,2], VAL=[0,1,2,3,1,2,3], EMPTY=0;
+    let state=null, theta=[2.2,0.8,0.2,1.2,-1.5,1.4,1.1,0.6,0,0,0,0.4];
+    let human='X', depth=4, selectedVal=1, terminal=false;
+
+    // ------- Elements -------
+    const boardEl=document.getElementById('board');
+    const statusEl=document.getElementById('status');
+    const humanSel=document.getElementById('humanSide');
+    const depthEl=document.getElementById('depth'), depthLabel=document.getElementById('depthLabel');
+    const newGameBtn=document.getElementById('newGame');
+    const thetaJson=document.getElementById('thetaJson');
+    const applyThetaBtn=document.getElementById('applyTheta'), resetThetaBtn=document.getElementById('resetTheta');
+    const pieceBar=document.getElementById('pieceBar');
+    const navPlay=document.getElementById('navPlay');
+    const navModel=document.getElementById('navModel');
+    const rTabBtnPlay=document.getElementById('r-tab-btn-play');
+    const rTabBtnModel=document.getElementById('r-tab-btn-model');
+    const panePlay=document.getElementById('right-pane-play');
+    const paneModel=document.getElementById('right-pane-model');
+
+    // ------- Right-pane tabs -------
+    function setRightPane(which){
+      const isPlay = (which==='play');
+      if(rTabBtnPlay && rTabBtnModel){
+        rTabBtnPlay.className = 'px-4 py-2 text-sm font-semibold ' + (isPlay?'bg-emerald-600 text-white':'text-stone-600 hover:bg-stone-50');
+        rTabBtnModel.className = 'px-4 py-2 text-sm font-semibold ' + (!isPlay?'bg-emerald-600 text-white':'text-stone-600 hover:bg-stone-50');
+      }
+      if(isPlay){ panePlay.classList.remove('hidden'); paneModel.classList.add('hidden'); }
+      else { paneModel.classList.remove('hidden'); panePlay.classList.add('hidden'); }
+      // header nav styling
+      navPlay.className = 'px-3 py-1 rounded-xl ' + (isPlay?'bg-emerald-50 text-emerald-700 hover:bg-emerald-100':'hover:bg-stone-100');
+      navModel.className = 'px-3 py-1 rounded-xl ' + (!isPlay?'bg-emerald-50 text-emerald-700 hover:bg-emerald-100':'hover:bg-stone-100');
+      // update hash
+      history.replaceState(null, '', isPlay ? '#play' : '#model');
+    }
+    if(rTabBtnPlay) rTabBtnPlay.onclick = ()=>setRightPane('play');
+    if(rTabBtnModel) rTabBtnModel.onclick = ()=>setRightPane('model');
+    navPlay.onclick = ()=>setRightPane('play');
+    navModel.onclick = ()=>setRightPane('model');
+
+    // ------- UI widgets -------
+    function pieceButton(v, remaining, active){
+      const disabled = remaining<=0;
+      const base = 'flex items-center justify-between px-4 py-3 rounded-2xl text-sm shadow-sm border transition-all';
+      const activeCl = active ? 'bg-emerald-600 text-white border-emerald-700' : 'bg-white hover:bg-stone-50';
+      const dim = disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer';
+      const el = document.createElement('button');
+      el.className = `${base} ${activeCl} ${dim}`;
+      el.innerHTML = `<div class="font-semibold text-base">Value ${v}</div>
+                      <div class="text-xs ${active?'text-emerald-100':'text-stone-500'}">remaining&nbsp;<span class="tabular-nums">${remaining}</span></div>`;
+      el.onclick = ()=>{ if(disabled) return; selectedVal=v; renderPieceBar(); renderBoard(); };
+      return el;
+    }
+
+    function humanInventory(){ return (human==='X') ? state.invX : state.invO; }
+    function botInventory(){ return (human==='X') ? state.invO : state.invX; }
+
+    function renderPieceBar(){
+      if(!pieceBar) return;
+      const inv = humanInventory();
+      pieceBar.innerHTML='';
+      [1,2,3].forEach(v=> pieceBar.appendChild(pieceButton(v, inv[v-1], v===selectedVal)) );
+    }
+
+    function allowedIndicesForSelected(){
+      const p = (human==='X'?1:2);
+      if(state.to_move !== p) return [];
+      const inv = humanInventory();
+      if(inv[selectedVal-1] <= 0) return [];
+      const out = [];
+      for(let i=0;i<9;i++){
+        const cell = state.board[i];
+        if(cell===EMPTY) { out.push(i); continue; }
+        const own = OWNER[cell], val = VAL[cell];
+        if(own!==p && selectedVal>val) out.push(i);
+      }
+      return out;
+    }
+
+    function renderBoard(){
+      boardEl.innerHTML='';
+      const allowed = new Set(allowedIndicesForSelected());
+      state.board.forEach((c,i)=>{
+        const isX = (c!==0 && OWNER[c]===1);
+        const token = (c===0) ? '·' : ((isX?'X':'O')+VAL[c]);
+        const color = (c===0) ? 'text-stone-300' : (isX?'text-emerald-700':'text-indigo-700');
+
+        const btn=document.createElement('button');
+        btn.className='w-24 h-24 rounded-3xl border bg-white flex items-center justify-center text-2xl font-bold shadow-sm transition-all';
+        btn.classList.add('border-stone-300','hover:bg-stone-50');
+        if(allowed.has(i) && state.to_move===(human==='X'?1:2)){
+          btn.classList.add('ring-2','ring-emerald-300');
+        }
+        const span=document.createElement('span'); span.textContent=token; span.className=color;
+        btn.appendChild(span);
+        btn.onclick=()=>onCellClick(i);
+        boardEl.appendChild(btn);
+      });
+
+      const hinv = humanInventory(), binv = botInventory();
+      document.getElementById('invHuman1').textContent=hinv[0];
+      document.getElementById('invHuman2').textContent=hinv[1];
+      document.getElementById('invHuman3').textContent=hinv[2];
+      document.getElementById('invBot1').textContent=binv[0];
+      document.getElementById('invBot2').textContent=binv[1];
+      document.getElementById('invBot3').textContent=binv[2];
+    }
+
+    // ------- API calls -------
+    async function startNew(){
+      const res = await fetch(API('/api/new'), {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({human, theta, depth})}).then(r=>r.json());
+      state = res.state; terminal=false; if(thetaJson) thetaJson.value=JSON.stringify(theta);
+      statusEl.textContent='Your turn';
+      renderPieceBar(); renderBoard();
+      if(human==='O') await botMove();
+    }
+    async function humanMove(mv){
+      const res = await fetch(API('/api/human-move'), {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({state, move: mv})}).then(r=>r.json());
+      if(res.error){ alert('Illegal move'); return; }
+      state=res.state; terminal=res.terminal;
+      renderPieceBar(); renderBoard();
+      if(!terminal) await botMove();
+    }
+    async function botMove(){
+      statusEl.textContent='Bot thinking…';
+      const res = await fetch(API('/api/bot-move'), {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({state, theta, depth})}).then(r=>r.json());
+      state=res.state; terminal=res.terminal;
+      renderPieceBar(); renderBoard();
+      statusEl.textContent = terminal ? (res.winner===1?'X wins!': res.winner===2?'O wins!':'Draw') : 'Your turn';
+    }
+
+    function onCellClick(i){
+      if(terminal) return;
+      const yourTurn = (state.to_move === (human==='X'?1:2));
+      if(!yourTurn) return;
+      const inv = humanInventory();
+      if(inv[selectedVal-1] <= 0) return;
+      humanMove({v:selectedVal, i});
+    }
+
+    // ------- Bindings -------
+    document.getElementById('depth').oninput=()=>{ depth=parseInt(depthEl.value); depthLabel.textContent=depth; };
+    document.getElementById('humanSide').onchange=()=>{ human=humanSel.value; };
+    document.getElementById('newGame').onclick=startNew;
+    if(applyThetaBtn) applyThetaBtn.onclick=()=>{ try{ const t=JSON.parse(thetaJson.value); if(Array.isArray(t)) theta=t; }catch(_){ alert('Invalid JSON'); } };
+    if(resetThetaBtn) resetThetaBtn.onclick=()=>{ theta=[2.2,0.8,0.2,1.2,-1.5,1.4,1.1,0.6,0,0,0,0.4]; thetaJson.value=JSON.stringify(theta); };
+
+    // ------- Boot -------
+    // pick pane from hash
+    if(location.hash === '#model') setRightPane('model'); else setRightPane('play');
+    startNew();
+  </script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+{
+  "feature_names": [
+    "center",
+    "corners",
+    "sides",
+    "two_open",
+    "neg_opp_two_open",
+    "inv3_diff",
+    "inv2_diff",
+    "inv1_diff",
+    "ow_lt1",
+    "ow_lt2",
+    "ow_lt3",
+    "secure_cells"
+  ],
+  "theta": [
+    2.3400000000000003,
+    0.0,
+    0.0,
+    -0.12,
+    -4.2,
+    1.7999999999999998,
+    1.5,
+    1.2000000000000002,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "agreement": 0.7428571428571429,
+  "evaluations": 1421,
+  "levels": [
+    5,
+    7,
+    9
+  ],
+  "topk": 6,
+  "shrink": 0.4,
+  "depth": 4,
+  "seed": 0,
+  "timestamp": "2025-09-25 07:54:23"
+}
