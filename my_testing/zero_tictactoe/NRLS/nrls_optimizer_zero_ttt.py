@@ -3,6 +3,7 @@ import numpy as np
 from dataclasses import dataclass
 import zero_ttt_core as core
 from zero_ttt_core import State, FEATURE_NAMES
+import zero_ttt_core as Z
 
 def exact_best_move(s: State):
     v, mv = core.solve_exact(s)
@@ -32,6 +33,29 @@ def agreement_objective(theta, states, depth=4):
         mv_a = approx_best_move(s, theta, depth=depth)
         correct += int(mv_a==mv_e); tot += 1
     return correct / max(1,tot)
+
+# Replacee agreement_objective to: Teach θ to minimize how much value it loses vs. optimal, not just whether it matches the move.
+def regret_objective(theta, states, depth=4):
+    """Return NEGATIVE average regret (so NRLS maximizes this)."""
+    th = np.asarray(theta, float)
+    total = 0.0; n = 0
+    for s in states:
+        # best exact value at root (for side to move)
+        q_star = -np.inf
+        for mv in Z.legal_moves(s):
+            v_child, _ = Z.solve_exact(Z.apply_move(s, mv))
+            q_star = max(q_star, v_child)         # exact Q*(s,mv)
+
+        # θ policy move
+        _, mv_hat = Z.search_theta(s, depth=depth, theta=th)
+        if mv_hat is None:  # no legal moves -> regret 0
+            continue
+        v_hat, _ = Z.solve_exact(Z.apply_move(s, mv_hat))
+
+        total += (q_star - v_hat)                # regret ≥ 0
+        n += 1
+    if n == 0: return -0.0
+    return -(total / n)
 
 @dataclass
 class NRLSResult:
@@ -88,7 +112,7 @@ def train_nrls(seed=0, n_states=60, depth=4, levels=(5,7,9), topk=6, shrink=0.4)
     states = make_training_set(n=n_states, seed=seed, steps_range=(2,8))
     K = len(FEATURE_NAMES)
     bounds = [(-3,3)]*K
-    f = lambda th: agreement_objective(np.asarray(th), states, depth=depth)
+    f = lambda th: regret_objective(np.asarray(th), states, depth=depth)
     res = nrls_maximize(f, bounds, levels=levels, topk=topk, shrink=shrink, verbose=True)
     return res, states
 
