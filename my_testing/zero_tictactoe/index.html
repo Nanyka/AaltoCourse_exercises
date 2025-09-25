@@ -277,6 +277,31 @@
       [1,2,3].forEach(v=> pieceBar.appendChild(pieceButton(v, inv[v-1], v===selectedVal)) );
     }
 
+
+    function hasAnyLegalMoveFor(player){
+      // player: 1 for X, 2 for O
+      const inv = (player===1) ? state.invX : state.invO;
+      // Try each value we still have
+      for(let v=1; v<=3; v++){
+        if(inv[v-1] <= 0) continue;
+        for(let i=0;i<9;i++){
+          const cell = state.board[i];
+          if(cell===EMPTY) return true;
+          const own = OWNER[cell], val = VAL[cell];
+          if(own!==player && v>val) return true;
+        }
+      }
+      return false;
+    }
+    function checkImmediateDrawIfNoMoves(){
+      if(terminal) return;
+      const p = state.to_move; // current player
+      if(!hasAnyLegalMoveFor(p)){
+        terminal = true;
+        statusEl.textContent = 'Draw (no legal moves)';
+      }
+    }
+
     function allowedIndicesForSelected(){
       const p = (human==='X'?1:2);
       if(state.to_move !== p) return [];
@@ -326,21 +351,25 @@
       const res = await fetch(API('/api/new'), {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({human, theta, depth})}).then(r=>r.json());
       state = res.state; terminal=false; if(thetaJson) thetaJson.value=JSON.stringify(theta);
       statusEl.textContent='Your turn';
-      renderPieceBar(); renderBoard();
+      renderPieceBar(); renderBoard(); checkImmediateDrawIfNoMoves();
       if(human==='O') await botMove();
     }
     async function humanMove(mv){
       const res = await fetch(API('/api/human-move'), {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({state, move: mv})}).then(r=>r.json());
       if(res.error){ alert('Illegal move'); return; }
-      state=res.state; terminal=res.terminal;
-      renderPieceBar(); renderBoard();
-      if(!terminal) await botMove();
+      state = res.state; terminal = res.terminal;
+      renderPieceBar(); renderBoard(); checkImmediateDrawIfNoMoves();
+      if (terminal) {
+        statusEl.textContent = (res.winner===1?'X wins!': res.winner===2?'O wins!':'Draw');
+        return;
+      }
+      await botMove();
     }
     async function botMove(){
       statusEl.textContent='Bot thinking…';
       const res = await fetch(API('/api/bot-move'), {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({state, theta, depth})}).then(r=>r.json());
       state=res.state; terminal=res.terminal;
-      renderPieceBar(); renderBoard();
+      renderPieceBar(); renderBoard(); checkImmediateDrawIfNoMoves();
       statusEl.textContent = terminal ? (res.winner===1?'X wins!': res.winner===2?'O wins!':'Draw') : 'Your turn';
     }
 
