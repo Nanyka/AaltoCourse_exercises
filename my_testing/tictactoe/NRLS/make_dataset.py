@@ -10,7 +10,7 @@ def main():
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("--games", type=int, default=1000)
-    ap.add_argument("--theta", type=float, nargs=6, default=[3.0,2.0,0.5,0.3,0.0,0.6])
+    ap.add_argument("--theta", type=float, nargs=6, default=[2.0,3.0,0.5,0.3,0.0,0.6])
     ap.add_argument("--out", type=str, default="tictactoe_dataset.csv")
     args = ap.parse_args()
 
