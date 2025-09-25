@@ -22,6 +22,13 @@ REF_D = (0,3,6,1,4,7,2,5,8)
 REF_AD= (8,5,2,7,4,1,6,3,0)
 SYMS = [tuple(range(9)), ROT90, ROT180, ROT270, REF_H, REF_V, REF_D, REF_AD]
 
+CENTER = 4
+CORNERS = {0,2,6,8}
+SIDES = {1,3,5,7}
+
+FEATURE_NAMES = ["center","corners","sides","two_open","neg_opp_two_open",
+                 "inv3_diff","inv2_diff","inv1_diff","ow_lt1","ow_lt2","ow_lt3","secure_cells"]
+
 @dataclass(frozen=True)
 class State:
     board: tuple
@@ -93,10 +100,6 @@ def canonical_state(state: State):
     boards = [ transform_board(state.board, perm) for perm in SYMS ]
     best_board = min(boards)
     return (best_board, state.invX, state.invO, state.to_move)
-
-CENTER = 4
-CORNERS = {0,2,6,8}
-SIDES = {1,3,5,7}
 
 def order_key(state: State, move):
     v,i = move
@@ -173,9 +176,6 @@ def feature_vector(state):
     return np.array([center, corners, sides, two_open, -opp_two_open,
                      inv_feat[2], inv_feat[1], inv_feat[0],
                      owc[0], owc[1], owc[2], secure], dtype=float)
-
-FEATURE_NAMES = ["center","corners","sides","two_open","neg_opp_two_open",
-                 "inv3_diff","inv2_diff","inv1_diff","ow_lt1","ow_lt2","ow_lt3","secure_cells"]
 
 def E_theta(state, theta): 
     return float(np.dot(theta, feature_vector(state)))
