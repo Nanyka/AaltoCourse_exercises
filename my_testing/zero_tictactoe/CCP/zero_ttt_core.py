@@ -11,6 +11,11 @@ VAL   = [0, 1, 2, 3, 1, 2, 3]
 INIT_INV = (2,2,2)
 WIN_LINES = [(0,1,2),(3,4,5),(6,7,8),(0,3,6),(1,4,7),(2,5,8),(0,4,8),(2,4,6)]
 
+# Features
+FEATURE_NAMES = ["center","corners","sides","two_open","neg_opp_two_open",
+                 "inv3_diff","inv2_diff","inv1_diff","ow_lt1","ow_lt2","ow_lt3","secure_cells",
+                 "win_now","need_block"]
+
 @dataclass(frozen=True)
 class State:
     board: tuple
@@ -51,11 +56,6 @@ def apply_move(state: State, mv):
     return State(tuple(b), invX, invO, other(p))
 
 def initial_state(): return State(tuple([EMPTY]*9), INIT_INV, INIT_INV, X)
-
-# Features
-FEATURE_NAMES = ["center","corners","sides","two_open","neg_opp_two_open",
-                 "inv3_diff","inv2_diff","inv1_diff","ow_lt1","ow_lt2","ow_lt3","secure_cells",
-                 "win_now","need_block"]
 
 def two_in_row_open(board, player, inv_self, inv_opp):
     cnt=0

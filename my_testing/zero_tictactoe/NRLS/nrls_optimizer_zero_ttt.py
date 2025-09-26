@@ -24,6 +24,7 @@ def make_training_set(n=60, seed=0, steps_range=(2,8)):
         states.append(s)
     return states
 
+# Original objective
 def agreement_objective(theta, states, depth=4):
     correct=0; tot=0
     for s in states:
@@ -31,7 +32,8 @@ def agreement_objective(theta, states, depth=4):
         if mv_e is None: 
             continue
         mv_a = approx_best_move(s, theta, depth=depth)
-        correct += int(mv_a==mv_e); tot += 1
+        correct += int(mv_a==mv_e)
+        tot += 1
     return correct / max(1,tot)
 
 # Replacee agreement_objective to: Teach θ to minimize how much value it loses vs. optimal, not just whether it matches the move.
@@ -112,7 +114,7 @@ def train_nrls(seed=0, n_states=60, depth=4, levels=(5,7,9), topk=6, shrink=0.4)
     states = make_training_set(n=n_states, seed=seed, steps_range=(2,8))
     K = len(FEATURE_NAMES)
     bounds = [(-3,3)]*K
-    f = lambda th: regret_objective(np.asarray(th), states, depth=depth)
+    f = lambda th: agreement_objective(np.asarray(th), states, depth=depth)
     res = nrls_maximize(f, bounds, levels=levels, topk=topk, shrink=shrink, verbose=True)
     return res, states
 
