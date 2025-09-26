@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zero TTT — Minimax (FastAPI)</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="wrapper">
+    <header class="topbar">
+      <h1>Zero Tic‑Tac‑Toe <span class="pill">minimax</span></h1>
+      <div class="controls">
+        <div class="segmented">
+          <button id="sideX" class="seg active">Play X</button>
+          <button id="sideO" class="seg">Play O</button>
+        </div>
+        <button id="newGame" class="btn">New Game</button>
+      </div>
+    </header>
+
+    <main class="content">
+      <section class="left">
+        <div id="board" class="board"></div>
+        <div class="legend">
+          <div class="inv" id="invX">X inv: 1×2 2×2 3×2</div>
+          <div class="inv" id="invO">O inv: 1×2 2×2 3×2</div>
+          <div id="turn" class="turn">turn: X</div>
+        </div>
+        <div id="status" class="status"></div>
+      </section>
+
+      <section class="right">
+        <div class="panel">
+          <h3>Pieces</h3>
+          <div class="pieces">
+            <div class="piece" data-v="1">1</div>
+            <div class="piece" data-v="2">2</div>
+            <div class="piece" data-v="3">3</div>
+            <div class="piece" data-v="1">1</div>
+            <div class="piece" data-v="2">2</div>
+            <div class="piece" data-v="3">3</div>
+          </div>
+          <p class="hint">Select a piece value, then click a cell.<br/>Higher values overwrite opponent tiles.</p>
+        </div>
+        <div class="panel info">
+          <h3>About</h3>
+          <p>Exact <b>minimax</b> on the server. You play with two 1s, two 2s, two 3s. Higher values overwrite opponent tiles; you cannot overwrite your own.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <canvas id="confetti"></canvas>
+  <script src="/static/app.js"></script>
+</body>
+</html>
