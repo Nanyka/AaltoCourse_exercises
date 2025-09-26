@@ -23,38 +23,43 @@
     </header>
 
     <main class="content">
-      <section class="left">
+      <section class="left card">
         <div id="board" class="board"></div>
-        <div class="legend">
-          <div class="inv" id="invX">X inv: 1×2 2×2 3×2</div>
-          <div class="inv" id="invO">O inv: 1×2 2×2 3×2</div>
-          <div id="turn" class="turn">turn: X</div>
-        </div>
         <div id="status" class="status"></div>
+
+        <div class="dock">
+          <div class="tray yours card-subtle">
+            <div class="tray-head">
+              <div id="playerBadge" class="badge x">X</div>
+              <span>Your pieces</span>
+            </div>
+            <div id="trayPlayer" class="tray-pieces"></div>
+          </div>
+          <div class="tray bot card-subtle">
+            <div class="tray-head">
+              <div id="botBadge" class="badge o">O</div>
+              <span>Bot pieces</span>
+            </div>
+            <div id="trayBot" class="tray-pieces"></div>
+          </div>
+        </div>
       </section>
 
       <section class="right">
-        <div class="panel">
-          <h3>Pieces</h3>
-          <div class="pieces">
-            <div class="piece" data-v="1">1</div>
-            <div class="piece" data-v="2">2</div>
-            <div class="piece" data-v="3">3</div>
-            <div class="piece" data-v="1">1</div>
-            <div class="piece" data-v="2">2</div>
-            <div class="piece" data-v="3">3</div>
-          </div>
-          <p class="hint">Select a piece value, then click a cell.<br/>Higher values overwrite opponent tiles.</p>
-        </div>
-        <div class="panel info">
-          <h3>About</h3>
-          <p>Exact <b>minimax</b> on the server. You play with two 1s, two 2s, two 3s. Higher values overwrite opponent tiles; you cannot overwrite your own.</p>
+        <div class="panel card-subtle">
+          <h3>How to play</h3>
+          <p class="muted">Tap a piece value (1/2/3) below, then tap a cell. You have two of each value; your opponent too. You can overwrite opponent tiles with a strictly higher value; never overwrite your own.</p>
+          <ul class="muted">
+            <li>Win with 3-in-a-row (by owner).</li>
+            <li>Inventory numbers are shown under each piece button.</li>
+            <li>Buttons disable when that value runs out.</li>
+          </ul>
         </div>
       </section>
     </main>
   </div>
 
-  <canvas id="confetti"></canvas>
+  <canvas id="confetti" style="opacity:0;transition:opacity .25s ease"></canvas>
   <script src="/static/app.js"></script>
 </body>
 </html>

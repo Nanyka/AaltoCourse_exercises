@@ -11,7 +11,6 @@ from starlette.middleware.sessions import SessionMiddleware
 from pathlib import Path
 import sys, os
 
-# Ensure local imports work whether you run from this folder or elsewhere
 HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path: sys.path.append(str(HERE))
 if "/mnt/data" not in sys.path: sys.path.append("/mnt/data")
@@ -22,14 +21,11 @@ from zero_ttt_minimax import MinimaxSolver, OptimalPolicy
 app = FastAPI(title="Zero TTT (minimax)")
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("ZTTT_SECRET","dev-secret"))
 
-# Serve static frontend (index.html, js, css)
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 
-# Global solver/policy (memoized across requests)
 SOLVER = MinimaxSolver()
 POLICY = OptimalPolicy(SOLVER)
 
-# ---------- helpers ----------
 def pack_state(s: Z.State) -> dict:
     return {
         "board": list(s.board),
@@ -58,7 +54,6 @@ def get_game(request: Request) -> dict:
         request.session["game"] = g
     return g
 
-# ---------- routes ----------
 @app.get("/")
 async def index():
     return FileResponse(HERE / "static" / "index.html")
@@ -98,10 +93,8 @@ async def human_move(request: Request):
     data = await request.json()
     v = int((data or {}).get("v", 0)); i = int((data or {}).get("i", -1))
     human = g["human_side"]
-    # Turn check
     if (human=="X" and s.to_move!=Z.X) or (human=="O" and s.to_move!=Z.O):
         raise HTTPException(status_code=400, detail="Not your turn.")
-    # Legality
     if (v,i) not in Z.legal_moves(s):
         raise HTTPException(status_code=400, detail="Illegal move.")
     s2 = Z.apply_move(s, (v,i))
@@ -118,7 +111,6 @@ async def human_move(request: Request):
 async def bot_move(request: Request):
     g = get_game(request)
     s = unpack_state(g["state"])
-    # Already over?
     if winner_from_state(s) != "ongoing" or not Z.legal_moves(s):
         return JSONResponse({
             "ok": True,
@@ -126,7 +118,6 @@ async def bot_move(request: Request):
             "legal": legal_moves_json(s),
             "result": winner_from_state(s)
         })
-    # Only move if it's the bot's turn
     human = g["human_side"]
     if (human=="X" and s.to_move==Z.X) or (human=="O" and s.to_move==Z.O):
         raise HTTPException(status_code=400, detail="It's human turn.")

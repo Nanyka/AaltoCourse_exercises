@@ -1,20 +1,21 @@
-
+// Redesigned UI logic
 const boardEl = document.getElementById('board');
-const invXEl  = document.getElementById('invX');
-const invOEl  = document.getElementById('invO');
-const turnEl  = document.getElementById('turn');
 const statusEl = document.getElementById('status');
 const sideX = document.getElementById('sideX');
 const sideO = document.getElementById('sideO');
 const newGameBtn = document.getElementById('newGame');
-const pieces = Array.from(document.querySelectorAll('.piece'));
+
+const trayPlayer = document.getElementById('trayPlayer');
+const trayBot = document.getElementById('trayBot');
+const playerBadge = document.getElementById('playerBadge');
+const botBadge = document.getElementById('botBadge');
+
 let selectedV = null;
 let humanSide = 'X';
 let state = null;
 let legal = [];
 
-function fmtInv(inv){ return `1×${inv[0]} 2×${inv[1]} 3×${inv[2]}`; }
-function setStatus(text){ statusEl.textContent = text; }
+function setStatus(t){ statusEl.textContent = t; }
 
 function renderBoard(board){
   boardEl.innerHTML = '';
@@ -48,21 +49,71 @@ async function api(path, body){
   return await res.json();
 }
 
+function updatePieceDocks(){
+  playerBadge.textContent = humanSide;
+  playerBadge.className = 'badge ' + (humanSide==='X'?'x':'o');
+  botBadge.textContent = humanSide==='X' ? 'O' : 'X';
+  botBadge.className = 'badge ' + (humanSide==='X'?'o':'x');
+
+  if (!state) return;
+  const humanInv = (humanSide==='X') ? state.invX : state.invO;
+  const botInv   = (humanSide==='X') ? state.invO : state.invX;
+  const humanTurn = state.to_move === humanSide;
+
+  function mkBtn(side, v, count, interactive){
+    const btn = document.createElement(interactive ? 'button' : 'div');
+    btn.className = (interactive ? 'pbtn ' : 'pbtn-ghost ') + (side==='X'?'x':'o');
+    btn.dataset.v = v;
+    btn.innerHTML = `<div class="pv">${v}</div><div class="count">${count}</div>`;
+    if (interactive){
+      if (count <= 0) {
+        btn.classList.add('disabled'); btn.disabled = true;
+      } else {
+        const hasLegal = legal.some(m => m.v === v);
+        if (!hasLegal || !humanTurn){ btn.classList.add('disabled'); btn.disabled = true; }
+      }
+      btn.addEventListener('click', () => {
+        if (btn.classList.contains('disabled')) return;
+        trayPlayer.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedV = v;
+        setStatus('Selected: '+humanSide+v);
+      });
+    } else {
+      if (count <= 0) btn.classList.add('disabled');
+    }
+    return btn;
+  }
+
+  trayPlayer.innerHTML = '';
+  trayPlayer.appendChild(mkBtn(humanSide, 1, humanInv[0], true));
+  trayPlayer.appendChild(mkBtn(humanSide, 2, humanInv[1], true));
+  trayPlayer.appendChild(mkBtn(humanSide, 3, humanInv[2], true));
+
+  trayBot.innerHTML = '';
+  const botSide = (humanSide==='X') ? 'O' : 'X';
+  trayBot.appendChild(mkBtn(botSide, 1, botInv[0], false));
+  trayBot.appendChild(mkBtn(botSide, 2, botInv[1], false));
+  trayBot.appendChild(mkBtn(botSide, 3, botInv[2], false));
+}
+
 function updateUI(payload){
   state = payload.state;
   legal = payload.legal || [];
   renderBoard(state.board);
-  invXEl.textContent = 'X inv: ' + fmtInv(state.invX);
-  invOEl.textContent = 'O inv: ' + fmtInv(state.invO);
-  turnEl.textContent = 'turn: ' + state.to_move;
+  updatePieceDocks();
   const res = payload.result;
-  if (res && res!=='ongoing'){ setStatus(res==='draw' ? 'Draw!' : `${res} wins!`); confetti(); }
-  else setStatus(state.to_move===humanSide ? 'Your move' : 'Bot thinking…');
+  if (res && res!=='ongoing'){
+    setStatus(res==='draw' ? 'Draw!' : `${res} wins!`);
+    confettiShot();
+  } else {
+    setStatus(state.to_move===humanSide ? 'Your move' : 'Bot thinking…');
+  }
 }
 
 async function startNew(){
   const payload = await api('/api/new_game', {human_side: humanSide});
-  selectedV = null; pieces.forEach(p=>p.classList.remove('active'));
+  selectedV = null;
   updateUI(payload);
   if (state.to_move !== humanSide) setTimeout(botMove, 400);
 }
@@ -81,34 +132,41 @@ async function botMove(){
 
 function onCellClick(e){
   const i = parseInt(e.currentTarget.dataset.i,10);
-  if (selectedV===null){ setStatus('Pick a piece value first.'); return; }
+  if (selectedV===null){ setStatus('Pick a piece below.'); return; }
   humanMove(selectedV, i);
 }
 
-pieces.forEach(p => {
-  p.addEventListener('click', () => {
-    pieces.forEach(q => q.classList.remove('active'));
-    p.classList.add('active');
-    selectedV = parseInt(p.dataset.v,10);
-    setStatus('Selected piece: ' + selectedV);
-  });
-});
-
-sideX.addEventListener('click', () => { sideX.classList.add('active'); sideO.classList.remove('active'); humanSide='X'; });
-sideO.addEventListener('click', () => { sideO.classList.add('active'); sideX.classList.remove('active'); humanSide='O'; });
+sideX.addEventListener('click', ()=>{ sideX.classList.add('active'); sideO.classList.remove('active'); humanSide='X'; });
+sideO.addEventListener('click', ()=>{ sideO.classList.add('active'); sideX.classList.remove('active'); humanSide='O'; });
 newGameBtn.addEventListener('click', startNew);
 
-function confetti(){
+// Confetti with auto-hide
+function confettiShot(){
   const cvs = document.getElementById('confetti');
   const ctx = cvs.getContext('2d');
-  const W = cvs.width = innerWidth, H = cvs.height = innerHeight;
-  const N = 120, parts = [];
+  cvs.style.opacity = 1;
+  cvs.width = innerWidth; cvs.height = innerHeight;
+  const N = 140;
+  const parts = [];
   for (let k=0;k<N;k++){
-    parts.push({x:Math.random()*W, y:-10, vy:2+Math.random()*3, vx:(Math.random()-.5)*2, r:2+Math.random()*3, a:Math.random()*Math.PI, col:Math.random()<.5?'#7c9cff':'#77e0c6'});
+    parts.push({
+      x: Math.random()*cvs.width, y: -10, vy: 2+Math.random()*3,
+      vx: (Math.random()-0.5)*2, r: 2+Math.random()*3, a: Math.random()*Math.PI,
+      col: Math.random()<0.5 ? '#7c9cff' : '#ff9966'
+    });
   }
-  let t=0; (function step(){ t++; ctx.clearRect(0,0,W,H);
-    parts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.a+=.1; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a); ctx.fillStyle=p.col; ctx.fillRect(-p.r,-p.r,2*p.r,2*p.r); ctx.restore(); });
-    if (t<120) requestAnimationFrame(step);
+  let frames = 0;
+  (function step(){
+    frames++;
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    parts.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.a+=0.12;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a);
+      ctx.fillStyle = p.col; ctx.fillRect(-p.r,-p.r,2*p.r,2*p.r); ctx.restore();
+    });
+    if (frames < 120) requestAnimationFrame(step);
+    else { cvs.style.opacity = 0; setTimeout(()=>{ ctx.clearRect(0,0,cvs.width,cvs.height); }, 260); }
   })();
 }
+
 startNew();
