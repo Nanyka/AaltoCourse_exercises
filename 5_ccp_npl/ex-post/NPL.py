@@ -94,6 +94,7 @@ def hes(theta, model, data, pk0):
     return s.T@s/data.x.shape[0]
 
 def solve(model):
+
     pk0 = np.ones((model.n))*0.99  # starting value for CCP's
     pk = np.nan+np.zeros((100,model.n))
     pk[0,:] = pk0
