@@ -3,11 +3,11 @@ import numpy as np
 import pandas as pd
 import os
 from scipy.optimize import minimize
-from nfxp_model import NFXPFinLitConsBudgetAgeType, SpecType
+from nfxp_model_v1 import NFXPFinLitConsBudgetAgeType, SpecType
 
 def load_data(csv_path: str):
     df = pd.read_csv(csv_path)
-    df = df[['id','t','a','y','x','age']].copy().sort_values(['id','t']).reset_index(drop=True)
+    df = df[['id','t','age','a','y','x']].copy().sort_values(['id','t']).reset_index(drop=True)
     return df
 
 def prep_grids(df: pd.DataFrame, n_a: int = 24):
