@@ -71,7 +71,9 @@ def npl_operator(model: NFXPFinLitConsBudgetAgeType, spec: SpecType, V_prev: np.
                 vals = np.array(vals)
                 m = vals.max()
                 Qx[ai, gi, xi] = m + np.log(np.exp(vals - m).sum()) # take logsum for saving rate
-    V_new = logsumexp_axis(Qx, axis=2) # take logsum for risky share --> integrated VF (ex-ante), lack of the Euler-Mascheroni constant
+    # V_new = logsumexp_axis(Qx, axis=2) # take logsum for risky share --> integrated VF (ex-ante), TODO lack of the Euler-Mascheroni constant
+    V_new = logsumexp_axis(Qx, axis=2) # take logsum for risky share --> integrated VF (ex-ante)
+    V_new = V_new + 0.5772 # the Euler-Mascheroni constant
     CCP_x = softmax_axis(Qx, axis=2)
     return V_new, CCP_x, Qx
 
