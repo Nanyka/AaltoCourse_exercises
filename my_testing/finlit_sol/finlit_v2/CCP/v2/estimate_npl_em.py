@@ -71,8 +71,7 @@ def npl_operator(model: NFXPFinLitConsBudgetAgeType, spec: SpecType, V_prev: np.
                 vals = np.array(vals)
                 m = vals.max()
                 Qx[ai, gi, xi] = m + np.log(np.exp(vals - m).sum()) # take logsum for saving rate
-    # V_new = logsumexp_axis(Qx, axis=2) # take logsum for risky share --> integrated VF (ex-ante), TODO lack of the Euler-Mascheroni constant
-    V_new = logsumexp_axis(Qx, axis=2) # take logsum for risky share --> integrated VF (ex-ante)
+    V_new = logsumexp_axis(Qx, axis=2) # take logsum for risky share --> integrated VF (ex-ante) # TODO lack of the Euler-Mascheroni constant
     V_new = V_new + 0.5772 # the Euler-Mascheroni constant
     CCP_x = softmax_axis(Qx, axis=2)
     return V_new, CCP_x, Qx
@@ -131,7 +130,8 @@ def estimate_npl_em(csv_path: str, outdir: str = "outputs_npl_em",
     for em in range(em_iters):
 
         # Run inner loop for converged CCP
-        spec1 = pack_spec(shared, theta1); spec2 = pack_spec(shared, theta2)
+        spec1 = pack_spec(shared, theta1)
+        spec2 = pack_spec(shared, theta2)
         V1, CCPx1, _ = npl_solve(model, spec1, max_iter=200, tol=tol)
         V2, CCPx2, _ = npl_solve(model, spec2, max_iter=200, tol=tol)
 
@@ -141,13 +141,14 @@ def estimate_npl_em(csv_path: str, outdir: str = "outputs_npl_em",
         assert np.all(id_order1 == id_order2)
         id_order = id_order1
         Z_aligned = np.vstack([Z[id_to_pos[pid], :] for pid in id_order])
-        p1 = sigmoid(Z_aligned @ eta)
-        mix = p1*np.exp(ell1) + (1.0-p1)*np.exp(ell2)
-        obs_ll = float(np.sum(np.log(np.maximum(mix, 1e-300)))); obs_ll_hist.append(obs_ll)
+        p1 = sigmoid(Z_aligned @ eta) # eta is the parameter vector for the type-probability logit model, p1 is the prior
+        mix = p1*np.exp(ell1) + (1.0-p1)*np.exp(ell2) # the likelihood of observing this person’s behavior under the mixture model
+        obs_ll = float(np.sum(np.log(np.maximum(mix, 1e-300))))
+        obs_ll_hist.append(obs_ll)
 
-        # Update estimated type probabilities
-        m = np.maximum(ell1, ell2);
-        w1 = p1*np.exp(ell1 - m);
+        # E-step: Compute posterior probabilities
+        m = np.maximum(ell1, ell2) # m is just a numerical trick to avoid overflow in w1 and w2 steps
+        w1 = p1*np.exp(ell1 - m)
         w2 = (1.0-p1)*np.exp(ell2 - m)
 
         den = w1 + w2;
@@ -158,20 +159,21 @@ def estimate_npl_em(csv_path: str, outdir: str = "outputs_npl_em",
             omega2 = 1.0 - omega1
         omega1_old = omega1.copy()
 
+        # M-steps: update eta and theta that best matches the posterior classification from the E-step
         # we have to solve min neg_logit since scipy.optimize.minimize solve minimization problems
         def neg_logit(eta_vec):
             p = sigmoid(Z_aligned @ eta_vec); eps = 1e-12 # prior probability Pr(type=1∣Zi;η).
             return -np.sum(omega1*np.log(np.maximum(p,eps)) + omega2*np.log(np.maximum(1-p,eps)))
         eta = minimize(neg_logit, eta, method='BFGS', options=dict(maxiter=200, gtol=1e-5)).x
 
-        def neg_wpll(th, weights):
-            spec = pack_spec(shared, th)
+        def neg_wpll(theta, weights):
+            spec = pack_spec(shared, theta)
             _, CCPx, _ = npl_solve(model, spec, max_iter=200, tol=tol)
             ells, _ = per_id_loglike_x(df, model, CCPx)
             return -np.sum(weights * ells)
-        theta1 = minimize(lambda th: neg_wpll(th, omega1), theta1, method='Nelder-Mead',
+        theta1 = minimize(lambda theta: neg_wpll(theta, omega1), theta1, method='Nelder-Mead',
                           options=dict(maxiter=nm_steps, xatol=1e-3, fatol=1e-3)).x
-        theta2 = minimize(lambda th: neg_wpll(th, omega2), theta2, method='Nelder-Mead',
+        theta2 = minimize(lambda theta: neg_wpll(theta, omega2), theta2, method='Nelder-Mead',
                           options=dict(maxiter=nm_steps, xatol=1e-3, fatol=1e-3)).x
 
     est = pd.DataFrame({"param":["g0_1","g1_1","d0_1","d1_1","g0_2","g1_2","d0_2","d1_2","eta_const","eta_age0","eta_ln_a0"],
@@ -201,7 +203,8 @@ if __name__ == "__main__":
     p.add_argument("--csv", type=str, required=True); p.add_argument("--outdir", type=str, default="./outputs_npl_em")
     p.add_argument("--na", type=int, default=24); p.add_argument("--gh", type=int, default=5)
     p.add_argument("--em", type=int, default=6); p.add_argument("--nm", type=int, default=30)
-    p.add_argument("--fixbeta", action="store_true"); p.add_argument("--beta", type=float, default=0.93); p.add_argument("--sigma", type=float, default=2.2)
+    p.add_argument("--fixbeta", action="store_true"); p.add_argument("--beta", type=float, default=0.93);
+    p.add_argument("--sigma", type=float, default=2.2)
     p.add_argument("--damping", type=float, default=0.0)
     args = p.parse_args()
     out = estimate_npl_em(args.csv, outdir=args.outdir, n_a=args.na, gh_order=args.gh, em_iters=args.em, nm_steps=args.nm,
