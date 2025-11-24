@@ -107,7 +107,7 @@ class zurcher():
 
     value_keep = -self.cost + eulerc - np.log(pk)
     value_replace = -self.RC - self.cost[0] + eulerc - np.log(1 - pk)
-    pv = value_keep * pk + value_replace * (1 - pk)
+    pv = value_keep * pk + value_replace * (1 - pk) # correction term e(x,d)
 
     self.Vsigma = np.ravel(self.Finv @ pv)
 
